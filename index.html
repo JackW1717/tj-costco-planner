@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Costco + Trader Joe’s Dinner Planner</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { margin: 0; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+const { useEffect, useMemo, useState } = React;
+
+const PROTEINS = [
+  { id: "beef", name: "Beef" },
+  { id: "chicken", name: "Chicken" },
+  { id: "turkey", name: "Turkey" },
+  { id: "sausage", name: "Sausage" },
+  { id: "pork", name: "Pork" },
+];
+
+const DEFAULT_PANTRY = [
+  "olive oil","salt","pepper","garlic","onion","lemon","rice","pasta","tortillas",
+  "eggs","yogurt","salad greens","frozen veggies","broccoli","bell peppers",
+  "tomatoes","spinach","parmesan","soy sauce","coconut milk","salsa","beans"
+];
+
+const MEALS = [
+  { id:"stirfry", name:"Stir‑fry (protein + veggies + rice)",
+    protein:["beef","chicken","pork","turkey"],
+    items:["rice","broccoli","bell peppers","soy sauce"],
+    healthy:true, processed:false, vegScore:3 },
+  { id:"sheetpan", name:"Sheet Pan Protein + Veggies",
+    protein:["chicken","pork","sausage"],
+    items:["broccoli","onion","olive oil","lemon"],
+    healthy:true, processed:false, vegScore:3 },
+  { id:"chicken_salad", name:"Big Salad + Chicken",
+    protein:["chicken"],
+    items:["salad greens","tomatoes","cucumber","lemon"],
+    healthy:true, processed:false, vegScore:3 },
+  { id:"tacos", name:"Healthy Tacos",
+    protein:["beef","chicken","turkey","pork"],
+    items:["tortillas","salsa","onion","lime","cabbage"],
+    healthy:true, processed:false, vegScore:2 },
+  { id:"pasta", name:"Pasta Night",
+    protein:["beef","turkey","sausage"],
+    items:["pasta","tomatoes","onion","garlic","parmesan"],
+    healthy:false, processed:false, vegScore:1 },
+  { id:"saus_peppers", name:"Sausage + Peppers",
+    protein:["sausage"],
+    items:["bell peppers","onion","rice"],
+    healthy:false, processed:true, vegScore:2 },
+];
+
+const STORAGE_KEY = "tj-costco-planner-static-v1";
+
+function lbsUsedPerDinner(maleOz, femaleOz) {
+  return Math.round(((maleOz + femaleOz) / 16) * 4) / 4;
+}
+
+function App() {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+
+  const [inventory, setInventory] = useState(saved?.inventory || {
+    beef:4, chicken:6, turkey:4, sausage:3, pork:3
+  });
+  const [maleOz, setMaleOz] = useState(saved?.maleOz || 10);
+  const [femaleOz, setFemaleOz] = useState(saved?.femaleOz || 6);
+  const [healthyMode, setHealthyMode] = useState(saved?.healthyMode ?? true);
+  const [plan, setPlan] = useState(saved?.plan || []);
+
+  useEffect(()=>{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      inventory, maleOz, femaleOz, healthyMode, plan
+    }));
+  },[inventory,maleOz,femaleOz,healthyMode,plan]);
+
+  const lbsPerDinner = lbsUsedPerDinner(maleOz,femaleOz);
+
+  function generatePlan(){
+    const choices = MEALS.filter(m =>
+      !healthyMode || (m.healthy && !m.processed)
+    );
+    const newPlan = Array.from({length:5}).map(()=>{
+      const meal = choices[Math.floor(Math.random()*choices.length)];
+      const protein = meal.protein.find(p => inventory[p] > 0) || meal.protein[0];
+      return { mealId: meal.id, proteinId: protein, lbsUsed: lbsPerDinner };
+    });
+    setPlan(newPlan);
+  }
+
+  function cooked(i){
+    const p = plan[i];
+    setInventory(prev => ({
+      ...prev,
+      [p.proteinId]: Math.max(0, prev[p.proteinId] - p.lbsUsed)
+    }));
+    setPlan(plan.filter((_,idx)=>idx!==i));
+  }
+
+  const groceryList = useMemo(()=>{
+    const items = [];
+    plan.forEach(p=>{
+      const m = MEALS.find(x=>x.id===p.mealId);
+      if(m) items.push(...m.items);
+    });
+    return [...new Set(items)].sort();
+  },[plan]);
+
+  return (
+    <div style={{fontFamily:"system-ui",padding:20,maxWidth:900,margin:"0 auto"}}>
+      <h1>Costco + Trader Joe’s Dinner Planner</h1>
+
+      <h2>Portions</h2>
+      Male oz:
+      <input type="number" value={maleOz} onChange={e=>setMaleOz(+e.target.value)} />
+      Female oz:
+      <input type="number" value={femaleOz} onChange={e=>setFemaleOz(+e.target.value)} />
+      <div>Uses ~ <b>{lbsPerDinner} lb</b> protein per dinner</div>
+
+      <h2>Healthy mode</h2>
+      <label>
+        <input type="checkbox" checked={healthyMode}
+          onChange={e=>setHealthyMode(e.target.checked)} />
+        Always healthy
+      </label>
+
+      <h2>Costco Protein Inventory (lbs)</h2>
+      {PROTEINS.map(p=>(
+        <div key={p.id}>
+          {p.name}: {inventory[p.id]} lb
+          <button onClick={()=>setInventory(v=>({...v,[p.id]:Math.max(0,v[p.id]-0.25)}))}>−</button>
+          <button onClick={()=>setInventory(v=>({...v,[p.id]:v[p.id]+0.25}))}>+</button>
+        </div>
+      ))}
+
+      <br/>
+      <button onClick={generatePlan}>Generate Week</button>
+
+      <h2>Plan</h2>
+      {plan.length===0 ? "No plan yet" : plan.map((p,i)=>{
+        const m = MEALS.find(x=>x.id===p.mealId);
+        return (
+          <div key={i} style={{border:"1px solid #ddd",padding:10,margin:"8px 0"}}>
+            <b>{m?.name}</b> — {p.proteinId} ({p.lbsUsed} lb)
+            <button onClick={()=>cooked(i)} style={{marginLeft:10}}>Cooked ✅</button>
+          </div>
+        );
+      })}
+
+      <h2>Trader Joe’s List</h2>
+      <ul>
+        {groceryList.map(x=><li key={x}>{x}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
