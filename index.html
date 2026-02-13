@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Costco + Trader Joe’s Planner (Static V2.7)</title>
+    <title>Costco + Trader Joe’s Planner (Static V2.8)</title>
 
     <!-- React (UMD) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -16,7 +16,6 @@
       :root {
         --bg: #0b0f19;
         --panel: rgba(255, 255, 255, 0.06);
-        --panel2: rgba(255, 255, 255, 0.09);
         --border: rgba(255, 255, 255, 0.12);
         --text: rgba(255, 255, 255, 0.92);
         --muted: rgba(255, 255, 255, 0.68);
@@ -24,318 +23,108 @@
         --radius: 18px;
         --radius2: 14px;
         --ring: 0 0 0 3px rgba(99, 102, 241, 0.18);
-        --accent: rgba(99, 102, 241, 0.9);
-        --good: rgba(16, 185, 129, 0.9);
-        --danger: rgba(239, 68, 68, 0.92);
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       body {
         margin: 0;
         color: var(--text);
-        background: radial-gradient(
-            1200px 700px at 12% 0%,
-            rgba(99, 102, 241, 0.22),
-            transparent 60%
-          ),
-          radial-gradient(
-            900px 600px at 100% 18%,
-            rgba(16, 185, 129, 0.16),
-            transparent 62%
-          ),
-          radial-gradient(
-            900px 600px at 30% 100%,
-            rgba(245, 158, 11, 0.12),
-            transparent 62%
-          ),
-          linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0)),
+        background:
+          radial-gradient(1200px 700px at 12% 0%, rgba(99,102,241,0.20), transparent 60%),
+          radial-gradient(900px 600px at 100% 18%, rgba(16,185,129,0.14), transparent 62%),
+          radial-gradient(900px 600px at 30% 100%, rgba(245,158,11,0.10), transparent 62%),
+          linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.0)),
           var(--bg);
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-          Helvetica, Arial;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       }
 
-      a {
-        color: inherit;
-      }
+      a { color: inherit; }
 
-      input,
-      textarea {
-        background: rgba(255, 255, 255, 0.06);
+      input, textarea {
+        background: rgba(255,255,255,0.06);
         color: var(--text);
         border: 1px solid var(--border);
         border-radius: var(--radius2);
         outline: none;
       }
-
-      input:focus,
-      textarea:focus {
-        border-color: rgba(99, 102, 241, 0.55);
-        box-shadow: var(--ring);
-      }
+      input:focus, textarea:focus { border-color: rgba(99,102,241,0.55); box-shadow: var(--ring); }
 
       button {
         border-radius: var(--radius2);
         border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.07);
+        background: rgba(255,255,255,0.07);
         color: var(--text);
         cursor: pointer;
-        transition: transform 0.05s ease, background 0.15s ease,
-          border-color 0.15s ease;
+        transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
       }
+      button:hover { background: rgba(255,255,255,0.11); }
+      button:active { transform: translateY(1px); }
 
-      button:hover {
-        background: rgba(255, 255, 255, 0.11);
-      }
+      .container { padding: 18px; max-width: 1200px; margin: 0 auto; }
+      .topbar { display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:14px; }
+      .title { display:flex; flex-direction:column; gap:6px; }
+      .title h1 { margin:0; font-size:28px; letter-spacing:-0.02em; }
+      .subtitle { margin:0; color: var(--muted); font-size:13px; }
+      .actions { display:flex; gap:10px; flex-wrap:wrap; }
 
-      button:active {
-        transform: translateY(1px);
-      }
-
-      .container {
-        padding: 18px;
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      .topbar {
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-      }
-
-      .title {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .title h1 {
-        margin: 0;
-        font-size: 28px;
-        letter-spacing: -0.02em;
-      }
-
-      .subtitle {
-        margin: 0;
-        color: var(--muted);
-        font-size: 13px;
-      }
-
-      .actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
-
-      @media (min-width: 980px) {
-        .split {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 14px;
-        }
-      }
+      .grid { display:grid; grid-template-columns: 1fr; gap:14px; }
+      @media (min-width: 980px) { .split { display:grid; grid-template-columns: 1fr 1fr; gap:14px; } }
 
       .card {
         border: 1px solid var(--border);
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.07),
-          rgba(255, 255, 255, 0.045)
-        );
+        background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.045));
         border-radius: var(--radius);
         box-shadow: var(--shadow);
         padding: 14px;
       }
+      .card h2 { margin:0; font-size:16px; letter-spacing:-0.01em; }
+      .muted { color: var(--muted); }
 
-      .card h2 {
-        margin: 0;
-        font-size: 16px;
-        letter-spacing: -0.01em;
-      }
+      .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+      .field { display:flex; gap:8px; align-items:center; }
+      .input { padding:10px 12px; width:110px; }
+      .inputWide { padding:10px 12px; width:100%; }
 
-      .muted {
-        color: var(--muted);
-      }
-
-      .row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-top: 10px;
-      }
-
-      .field {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .pillRow {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 10px;
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid var(--border);
-        padding: 7px 10px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.06);
-      }
-
-      .pill button {
-        border: none;
-        background: transparent;
-        padding: 0;
-        margin: 0;
-        font-size: 16px;
-        line-height: 1;
-        opacity: 0.75;
-      }
-
-      .input {
-        padding: 10px 12px;
-        width: 110px;
-      }
-
-      .inputWide {
-        padding: 10px 12px;
-        width: 100%;
-      }
-
+      .btn { padding:10px 12px; }
       .btnPrimary {
-        background: linear-gradient(
-          135deg,
-          rgba(99, 102, 241, 0.95),
-          rgba(59, 130, 246, 0.92)
-        );
-        border-color: rgba(99, 102, 241, 0.65);
-        padding: 10px 12px;
+        padding:10px 12px;
+        background: linear-gradient(135deg, rgba(99,102,241,0.95), rgba(59,130,246,0.92));
+        border-color: rgba(99,102,241,0.65);
       }
-
       .btnGood {
-        background: linear-gradient(
-          135deg,
-          rgba(16, 185, 129, 0.95),
-          rgba(34, 197, 94, 0.9)
-        );
-        border-color: rgba(16, 185, 129, 0.6);
-        padding: 10px 12px;
+        padding:10px 12px;
+        background: linear-gradient(135deg, rgba(16,185,129,0.95), rgba(34,197,94,0.9));
+        border-color: rgba(16,185,129,0.6);
       }
-
       .btnDanger {
-        background: rgba(239, 68, 68, 0.16);
-        border-color: rgba(239, 68, 68, 0.45);
-        color: rgba(255, 255, 255, 0.92);
-        padding: 10px 12px;
+        padding:10px 12px;
+        background: rgba(239,68,68,0.16);
+        border-color: rgba(239,68,68,0.45);
       }
+      .miniBtn { padding:6px 10px; border-radius:12px; background: rgba(255,255,255,0.06); }
 
-      .btn {
-        padding: 10px 12px;
-      }
+      .cardsGrid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:12px; margin-top:12px; }
+      .subCard { border:1px solid var(--border); border-radius:16px; padding:12px; background: rgba(255,255,255,0.05); }
+      .subCardTitle { font-weight: 750; letter-spacing: -0.01em; }
+      .kvs { font-size:12px; color: var(--muted); margin-top:4px; }
 
-      .miniBtn {
-        padding: 6px 10px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.06);
-      }
+      .pillRow { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+      .pill { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); padding:7px 10px; border-radius:999px; background: rgba(255,255,255,0.06); }
+      .pill button { border:none; background:transparent; padding:0; margin:0; font-size:16px; line-height:1; opacity:0.75; }
 
-      .cardsGrid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 12px;
-        margin-top: 12px;
-      }
-
-      .subCard {
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.05);
-      }
-
-      .subCardTitle {
-        font-weight: 750;
-        letter-spacing: -0.01em;
-      }
-
-      .kvs {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 4px;
-      }
-
-      .modalBackdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.42);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        z-index: 50;
-      }
-
+      .modalBackdrop { position:fixed; inset:0; background: rgba(0,0,0,0.42); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
       .modal {
-        width: 100%;
-        max-width: 800px;
-        max-height: 86vh;
-        overflow: auto;
-        border-radius: 18px;
-        background: rgba(15, 20, 32, 0.95);
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(10px);
+        width:100%; max-width: 820px; max-height: 86vh; overflow:auto;
+        border-radius:18px; background: rgba(15,20,32,0.95);
+        border:1px solid var(--border); box-shadow: var(--shadow); backdrop-filter: blur(10px);
       }
+      .modalHeader { padding:14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:10px; align-items:center; }
+      .modalBody { padding:14px; display:grid; grid-template-columns: 1fr; gap:14px; }
+      @media (min-width: 900px) { .modalBody { grid-template-columns: 1fr 1fr; } }
 
-      .modalHeader {
-        padding: 14px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: center;
-      }
-
-      .modalBody {
-        padding: 14px;
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
-
-      @media (min-width: 900px) {
-        .modalBody {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-
-      ul,
-      ol {
-        margin: 0;
-        padding-left: 18px;
-      }
-
-      li {
-        padding: 3px 0;
-      }
+      ul, ol { margin:0; padding-left:18px; }
+      li { padding:3px 0; }
     </style>
   </head>
 
@@ -345,79 +134,42 @@
     <script type="text/babel">
       const { useEffect, useMemo, useState } = React;
 
+      // ✅ Added salmon + shrimp
       const PROTEINS = [
         { id: "beef", name: "Beef" },
         { id: "chicken", name: "Chicken" },
         { id: "turkey", name: "Turkey" },
         { id: "sausage", name: "Sausage" },
         { id: "pork", name: "Pork" },
+        { id: "salmon", name: "Salmon" },
+        { id: "shrimp", name: "Shrimp" },
       ];
 
       const DEFAULT_PANTRY = [
-        "olive oil",
-        "salt",
-        "pepper",
-        "garlic",
-        "onion",
-        "lemon",
-        "rice",
-        "pasta",
-        "tortillas",
-        "eggs",
-        "yogurt",
-        "soy sauce",
-        "salsa",
-        "beans",
-        "tomatoes",
+        "olive oil","salt","pepper","garlic","onion","lemon",
+        "soy sauce","salsa","beans","tomatoes",
+        "rice","pasta","tortillas",
+        "yogurt"
       ];
 
       const DEFAULT_WEEKLY_STAPLES = [
-        "bananas",
-        "berries",
-        "avocados",
-        "salad greens",
-        "lemons",
-        "sparkling water",
-        "eggs",
-        "greek yogurt",
+        "bananas","berries","avocados","salad greens","lemons","sparkling water","eggs","greek yogurt",
       ];
 
-      const DEFAULT_FUN_SNACKS = [
-        "dark chocolate",
-        "popcorn",
-        "chips & guac",
-      ];
+      const DEFAULT_FUN_SNACKS = ["dark chocolate","popcorn","chips & guac"];
 
-      const AISLES = [
-        "Produce",
-        "Meat/Seafood",
-        "Dairy",
-        "Pantry",
-        "Frozen",
-        "Bakery",
-        "Snacks",
-        "Beverages",
-        "Other",
-      ];
+      const AISLES = ["Produce","Meat/Seafood","Dairy","Pantry","Frozen","Bakery","Snacks","Beverages","Other"];
 
-      function normalizeName(name) {
-        return (name || "").toLowerCase().trim();
-      }
-
+      function normalizeName(name) { return (name || "").toLowerCase().trim(); }
       function cleanText(s) {
-        return (s || "")
-          .toLowerCase()
-          .replace(/[^a-z0-9 ]+/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
+        return (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
       }
 
-      // Pantry fuzzy cover: "yogurt" covers "greek yogurt", etc.
+      // Fuzzy pantry cover: "yogurt" covers "greek yogurt", etc.
       function pantryCoversItem(pantryList, itemName) {
         const item = cleanText(itemName);
         if (!item) return false;
         const terms = (pantryList || []).map(cleanText).filter(Boolean);
-
         for (const t of terms) {
           if (t === item) return true;
           if (item.includes(t)) return true;
@@ -430,342 +182,408 @@
       function aisleForItem(item) {
         const s = (item || "").toLowerCase();
         const has = (...words) => words.some((w) => s.includes(w));
-        if (has("beef", "chicken", "turkey", "pork", "sausage", "steak", "ground"))
-          return "Meat/Seafood";
-        if (has("milk", "yogurt", "cheese", "parmesan", "feta", "butter", "cream"))
-          return "Dairy";
+
+        if (has("beef","chicken","turkey","pork","sausage","steak","ground","salmon","shrimp","fish")) return "Meat/Seafood";
+        if (has("milk","yogurt","cheese","parmesan","feta","butter","cream")) return "Dairy";
         if (has("frozen")) return "Frozen";
-        if (has("bread", "buns", "roll", "bagel", "tortilla")) return "Bakery";
-        if (has("water", "sparkling", "seltzer", "coffee", "tea")) return "Beverages";
-        if (has("chips", "snack", "nuts", "crackers", "chocolate", "popcorn"))
-          return "Snacks";
-        if (
-          has(
-            "broccoli",
-            "spinach",
-            "lettuce",
-            "salad",
-            "tomato",
-            "cucumber",
-            "pepper",
-            "onion",
-            "garlic",
-            "lemon",
-            "lime",
-            "cabbage",
-            "carrot",
-            "avocado",
-            "berries",
-            "banana",
-            "ginger",
-            "scallion",
-            "cilantro"
-          )
-        )
-          return "Produce";
-        if (
-          has(
-            "rice",
-            "pasta",
-            "beans",
-            "salsa",
-            "soy",
-            "oil",
-            "salt",
-            "pepper",
-            "spice",
-            "tomatoes",
-            "coconut",
-            "vinegar",
-            "can"
-          )
-        )
-          return "Pantry";
+        if (has("bread","buns","roll","bagel","tortilla")) return "Bakery";
+        if (has("water","sparkling","seltzer","coffee","tea")) return "Beverages";
+        if (has("chips","snack","nuts","crackers","chocolate","popcorn")) return "Snacks";
+
+        if (has("broccoli","spinach","lettuce","salad","tomato","cucumber","pepper","onion","garlic","lemon","lime","cabbage","carrot","avocado","berries","banana","ginger","scallion","cilantro","zucchini","sweet potato","green beans","string beans","asparagus")) return "Produce";
+        if (has("rice","pasta","beans","salsa","soy","oil","salt","pepper","spice","tomatoes","coconut","vinegar","can","couscous","pesto")) return "Pantry";
+
         return "Other";
       }
 
-      function ing(name, qty, unit, note, optional = false) {
-        return { name, qty, unit, note, optional };
-      }
+      function ing(name, qty, unit, note, optional=false) { return { name, qty, unit, note, optional }; }
 
-      function roundNice(n) {
-        const r = Math.round(n * 4) / 4;
-        return r % 1 === 0 ? String(r.toFixed(0)) : String(r);
-      }
-
-      function sumIngredient(map, item, multiplier = 1) {
+      function roundNice(n) { const r = Math.round(n * 4) / 4; return r % 1 === 0 ? String(r.toFixed(0)) : String(r); }
+      function sumIngredient(map, item, multiplier=1) {
         const name = normalizeName(item.name);
         if (!name) return;
         const key = `${name}__${item.unit || ""}`;
         const prev = map.get(key);
         const addQty = (Number(item.qty) || 0) * multiplier;
-        map.set(key, {
-          name: item.name,
-          unit: item.unit || "",
-          qty: (prev?.qty || 0) + addQty,
-          optional: !!item.optional,
-        });
+        map.set(key, { name: item.name, unit: item.unit || "", qty: (prev?.qty || 0) + addQty, optional: !!item.optional });
       }
-
       function formatLine(item) {
         const qty = item.qty ? `${roundNice(item.qty)} ` : "";
         const unit = item.unit ? `${item.unit} ` : "";
         return `${qty}${unit}${item.name}`.trim();
       }
 
-      function roundToQuarter(x) {
-        return Math.round(x * 4) / 4;
-      }
-
+      function roundToQuarter(x) { return Math.round(x * 4) / 4; }
       function lbsUsedPerDinner(maleOz, femaleOz) {
         const totalOz = (Number(maleOz) || 0) + (Number(femaleOz) || 0);
         return roundToQuarter(totalOz / 16);
       }
 
+      // ✅ More specific meals (creative, "plate-style" combos)
+      // Protein is assumed from Costco inventory; sides/veg/carb from TJ list.
       const DEFAULT_MEALS = [
         {
-          id: "taco_bowls",
-          name: "Taco Bowls (veg-forward)",
-          protein: ["beef", "chicken", "pork", "turkey"],
-          tags: ["mexican", "weeknight"],
-          healthy: true,
-          processed: false,
-          refinedCarb: false,
-          vegScore: 3,
+          id: "chx_broc_pesto_pasta",
+          name: "Grilled Chicken + Broccoli + Pesto Pasta",
+          protein: ["chicken"],
+          tags: ["italian-ish","weeknight"],
+          healthy: true, processed: false, refinedCarb: true, vegScore: 2,
+          recipe: {
+            timeMins: 30,
+            ingredients: [
+              ing("broccoli", 2, "heads"),
+              ing("pasta", 12, "oz"),
+              ing("pesto", 6, "tbsp"),
+              ing("parmesan", 2, "oz", "optional", true),
+              ing("lemon", 1, "each", "optional finish", true),
+            ],
+            steps: [
+              "Season and grill/pan-sear chicken; rest and slice.",
+              "Roast broccoli at 425°F 15–18 min (or sauté).",
+              "Boil pasta; toss with pesto + splash of pasta water; top parmesan if you want.",
+              "Serve: chicken + broccoli + pesto pasta (lemon squeeze optional)."
+            ],
+          },
+        },
+        {
+          id: "salmon_zuc_couscous",
+          name: "Salmon + Zucchini + Lemon Couscous",
+          protein: ["salmon"],
+          tags: ["mediterranean","light"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
           recipe: {
             timeMins: 25,
             ingredients: [
-              ing("salsa", 0.5, "cup"),
+              ing("zucchini", 3, "each"),
+              ing("couscous", 1.25, "cups"),
+              ing("lemon", 1, "each"),
+              ing("olive oil", 1, "tbsp"),
+              ing("feta", 2, "oz", "optional", true),
+              ing("dill", 0.5, "bunch", "optional", true),
+            ],
+            steps: [
+              "Roast or pan-sear salmon; season with salt/pepper + lemon.",
+              "Sauté zucchini (or roast) until browned-tender.",
+              "Make couscous; fluff with olive oil + lemon zest/juice.",
+              "Serve with feta/dill optional."
+            ],
+          },
+        },
+        {
+          id: "taco_bowls_crunchy",
+          name: "Taco Bowls (protein + slaw + avocado)",
+          protein: ["beef","chicken","turkey","pork","shrimp"],
+          tags: ["mexican","fast"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 3,
+          recipe: {
+            timeMins: 25,
+            ingredients: [
               ing("cabbage", 0.5, "head", "or bagged slaw"),
+              ing("salsa", 0.75, "cup"),
               ing("avocados", 1, "each"),
               ing("lime", 1, "each"),
-              ing("onion", 1, "each"),
               ing("cilantro", 0.5, "bunch", "optional", true),
+              ing("tortilla chips", 1, "bag", "optional crunch", true),
             ],
             steps: [
-              "Brown your Costco protein with salt/pepper (add taco seasoning if you keep it).",
-              "Shred cabbage; slice onion; chop cilantro (optional).",
-              "Assemble bowls: protein + cabbage + salsa + avocado + squeeze of lime.",
+              "Cook protein with salt/pepper + chili powder/cumin if you have it.",
+              "Make quick slaw: cabbage + lime + salt + olive oil.",
+              "Assemble bowls with salsa + avocado; add chips if you want crunch."
             ],
           },
         },
         {
-          id: "stir_fry",
-          name: "Stir-fry (protein + veggies)",
-          protein: ["beef", "chicken", "pork", "turkey"],
-          tags: ["asian", "weeknight"],
-          healthy: true,
-          processed: false,
-          refinedCarb: false,
-          vegScore: 3,
+          id: "turkey_meatballs_sweetpot_greenbeans",
+          name: "Turkey Meatballs + Sweet Potatoes + Green Beans",
+          protein: ["turkey"],
+          tags: ["sheet-pan","make-ahead"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
           recipe: {
-            timeMins: 20,
+            timeMins: 40,
             ingredients: [
-              ing("broccoli", 1, "head"),
-              ing("bell peppers", 2, "each"),
-              ing("soy sauce", 3, "tbsp"),
-              ing("ginger", 1, "inch"),
-              ing("scallions", 4, "stalks", "optional", true),
-              ing("rice", 1, "cup", "optional (if you want a carb)", true),
+              ing("sweet potatoes", 2, "each"),
+              ing("green beans", 12, "oz"),
+              ing("eggs", 1, "each"),
+              ing("breadcrumbs", 0.5, "cup", "optional", true),
+              ing("garlic", 2, "cloves"),
+              ing("lemon", 1, "each", "optional finish", true),
             ],
             steps: [
-              "Slice veggies; grate ginger.",
-              "Cook protein in a hot pan; remove.",
-              "Stir-fry veggies 4–6 min; add soy + ginger; return protein; toss.",
+              "Heat oven to 425°F. Cube sweet potatoes; toss with oil/salt; roast 10 min.",
+              "Mix turkey + egg + garlic + salt/pepper (breadcrumbs optional). Roll meatballs.",
+              "Add meatballs + green beans to pan; roast 18–22 min until done.",
+              "Finish with lemon squeeze."
             ],
           },
         },
         {
-          id: "sheet_pan",
-          name: "Sheet Pan Protein + Veggies",
-          protein: ["chicken", "pork", "sausage"],
-          tags: ["one-pan", "easy"],
-          healthy: true,
-          processed: false,
-          refinedCarb: false,
-          vegScore: 3,
+          id: "shrimp_garlic_noodles_bokchoy",
+          name: "Garlic Shrimp + Sesame Noodles + Greens",
+          protein: ["shrimp"],
+          tags: ["asian","quick"],
+          healthy: true, processed: false, refinedCarb: true, vegScore: 2,
+          recipe: {
+            timeMins: 25,
+            ingredients: [
+              ing("noodles", 10, "oz", "or pasta"),
+              ing("soy sauce", 3, "tbsp"),
+              ing("garlic", 3, "cloves"),
+              ing("ginger", 1, "inch"),
+              ing("bok choy", 2, "heads", "or spinach"),
+              ing("sesame oil", 1, "tbsp", "optional", true),
+              ing("scallions", 3, "stalks", "optional", true),
+            ],
+            steps: [
+              "Boil noodles; reserve a splash of water.",
+              "Sauté shrimp with garlic + ginger; remove.",
+              "Sauté bok choy; toss noodles with soy + (sesame oil optional) + noodle water.",
+              "Top with shrimp and scallions."
+            ],
+          },
+        },
+        {
+          id: "pork_tenderloin_apples_cabbage",
+          name: "Pork + Apples + Cabbage Skillet",
+          protein: ["pork"],
+          tags: ["cozy","one-pan"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
           recipe: {
             timeMins: 35,
             ingredients: [
-              ing("broccoli", 2, "heads"),
+              ing("cabbage", 0.75, "head"),
+              ing("apples", 2, "each"),
               ing("onion", 1, "each"),
-              ing("lemon", 1, "each"),
-              ing("olive oil", 2, "tbsp"),
+              ing("dijon mustard", 2, "tbsp", "optional", true),
+              ing("apple cider vinegar", 1, "tbsp", "optional", true),
             ],
             steps: [
-              "Heat oven to 425°F.",
-              "Toss chopped broccoli + onion with olive oil, salt, pepper.",
-              "Add protein to sheet pan; roast ~20–28 min (until done).",
-              "Finish with lemon squeeze.",
+              "Sear pork; set aside.",
+              "Sauté onion + cabbage; add sliced apples.",
+              "Return pork; finish with dijon/vinegar if you like."
             ],
           },
         },
         {
-          id: "big_salad",
-          name: "Big Salad + Chicken",
-          protein: ["chicken"],
-          tags: ["salad", "light"],
-          healthy: true,
-          processed: false,
-          refinedCarb: false,
-          vegScore: 3,
+          id: "beef_bulgogi_rice_cucumber",
+          name: "Beef Bulgogi-Style + Rice + Cucumber Salad",
+          protein: ["beef"],
+          tags: ["asian","crowd-pleaser"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
           recipe: {
-            timeMins: 15,
+            timeMins: 30,
             ingredients: [
-              ing("salad greens", 1, "bag"),
-              ing("tomatoes", 2, "each"),
+              ing("rice", 1.25, "cups"),
+              ing("soy sauce", 4, "tbsp"),
+              ing("garlic", 2, "cloves"),
+              ing("ginger", 1, "inch"),
               ing("cucumber", 1, "each"),
-              ing("lemon", 1, "each"),
-              ing("olive oil", 2, "tbsp"),
-              ing("feta", 3, "oz", "optional", true),
+              ing("rice vinegar", 2, "tbsp", "optional", true),
+              ing("sesame seeds", 1, "tbsp", "optional", true),
             ],
             steps: [
-              "Chop tomatoes + cucumber.",
-              "Toss greens with olive oil + lemon + salt/pepper.",
-              "Top with cooked chicken; add feta if you want.",
+              "Cook rice.",
+              "Quick marinade: soy + garlic + ginger (add a little sugar/honey if you keep it).",
+              "Sear beef in hot pan; toss with marinade.",
+              "Cucumber salad: sliced cucumber + vinegar + salt; top sesame optional."
             ],
           },
         },
         {
-          id: "chili",
-          name: "Turkey/Beef Chili (beans + veg)",
-          protein: ["beef", "turkey"],
-          tags: ["make-ahead", "comfort"],
-          healthy: true,
-          processed: false,
-          refinedCarb: false,
-          vegScore: 2,
+          id: "chicken_shawarma_salad_pita",
+          name: "Shawarma-ish Chicken + Israeli Salad + Pita",
+          protein: ["chicken"],
+          tags: ["mediterranean","fresh"],
+          healthy: true, processed: false, refinedCarb: true, vegScore: 3,
           recipe: {
-            timeMins: 45,
+            timeMins: 30,
             ingredients: [
-              ing("beans", 2, "cans"),
-              ing("tomatoes", 1, "can", "crushed or diced"),
-              ing("onion", 1, "each"),
-              ing("garlic", 3, "cloves"),
-              ing("chili powder", 2, "tbsp"),
-              ing("plain greek yogurt", 0.5, "cup", "optional topping", true),
+              ing("cucumber", 1, "each"),
+              ing("tomatoes", 3, "each"),
+              ing("lemon", 1, "each"),
+              ing("pita", 4, "each"),
+              ing("greek yogurt", 1, "cup", "sauce"),
+              ing("garlic", 1, "clove", "optional", true),
             ],
             steps: [
-              "Brown protein with chopped onion.",
-              "Add garlic + chili powder; stir 30 sec.",
-              "Add beans + tomatoes + 1 cup water; simmer 20–30 min.",
+              "Cook chicken with cumin/paprika/garlic powder if you have them.",
+              "Chop cucumber + tomatoes; dress with lemon + olive oil + salt.",
+              "Yogurt sauce: yogurt + lemon + garlic (optional).",
+              "Serve with pita."
             ],
           },
         },
         {
-          id: "saus_peppers",
-          name: "Sausage + Peppers",
-          protein: ["sausage"],
-          tags: ["italian", "quick"],
-          healthy: false,
-          processed: true,
-          refinedCarb: false,
-          vegScore: 2,
+          id: "salmon_greens_potatoes",
+          name: "Salmon + Garlicky Greens + Crispy Potatoes",
+          protein: ["salmon"],
+          tags: ["weekend","simple"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
+          recipe: {
+            timeMins: 40,
+            ingredients: [
+              ing("baby potatoes", 1.5, "lb"),
+              ing("spinach", 10, "oz", "or kale"),
+              ing("garlic", 2, "cloves"),
+              ing("lemon", 1, "each"),
+            ],
+            steps: [
+              "Roast potatoes at 425°F until crisp (25–30 min).",
+              "Cook salmon (pan or oven).",
+              "Sauté spinach with garlic; finish with lemon."
+            ],
+          },
+        },
+        {
+          id: "chicken_fajitas_peppers_onions",
+          name: "Chicken Fajitas + Peppers + Warm Tortillas",
+          protein: ["chicken"],
+          tags: ["mexican","easy"],
+          healthy: true, processed: false, refinedCarb: true, vegScore: 2,
           recipe: {
             timeMins: 25,
             ingredients: [
               ing("bell peppers", 3, "each"),
               ing("onion", 1, "each"),
-              ing("olive oil", 1, "tbsp"),
-              ing("mustard", 2, "tbsp", "optional", true),
+              ing("tortillas", 8, "each"),
+              ing("lime", 1, "each", "optional", true),
+              ing("avocados", 1, "each", "optional", true),
             ],
             steps: [
-              "Slice peppers + onion.",
-              "Brown sausage; remove.",
-              "Cook peppers/onion 8–10 min; return sausage; combine.",
+              "Sear chicken strips; set aside.",
+              "Sauté peppers/onion until charred-tender.",
+              "Return chicken; squeeze lime; serve with tortillas (avocado optional)."
             ],
           },
         },
         {
-          id: "pasta",
-          name: "Pasta (meat sauce)",
-          protein: ["beef", "turkey", "sausage"],
-          tags: ["italian", "comfort"],
-          healthy: false,
-          processed: false,
-          refinedCarb: true,
-          vegScore: 1,
+          id: "turkey_bolognese_salad",
+          name: "Turkey Bolognese + Side Salad",
+          protein: ["turkey"],
+          tags: ["italian","comfort"],
+          healthy: true, processed: false, refinedCarb: true, vegScore: 2,
           recipe: {
             timeMins: 35,
             ingredients: [
               ing("pasta", 12, "oz"),
               ing("tomatoes", 1, "can", "crushed"),
               ing("onion", 1, "each"),
-              ing("garlic", 3, "cloves"),
-              ing("parmesan", 3, "oz"),
+              ing("salad greens", 1, "bag"),
+              ing("lemon", 1, "each"),
+              ing("parmesan", 2, "oz", "optional", true),
             ],
             steps: [
-              "Boil pasta.",
-              "Brown protein with onion; add garlic; add tomatoes; simmer 10–15.",
-              "Toss pasta with sauce; top parmesan.",
+              "Cook pasta.",
+              "Brown turkey with onion; add crushed tomatoes; simmer 10–15.",
+              "Toss salad greens with lemon + olive oil.",
+              "Serve; parmesan optional."
+            ],
+          },
+        },
+        {
+          id: "shrimp_tacos_slaw",
+          name: "Shrimp Tacos + Lime Slaw",
+          protein: ["shrimp"],
+          tags: ["mexican","fast"],
+          healthy: true, processed: false, refinedCarb: true, vegScore: 2,
+          recipe: {
+            timeMins: 20,
+            ingredients: [
+              ing("tortillas", 8, "each"),
+              ing("cabbage", 0.5, "head"),
+              ing("lime", 1, "each"),
+              ing("salsa", 0.5, "cup"),
+              ing("avocados", 1, "each", "optional", true),
+              ing("greek yogurt", 0.5, "cup", "optional sauce", true),
+            ],
+            steps: [
+              "Quick slaw: cabbage + lime + salt.",
+              "Sauté shrimp with salt/pepper + chili powder if you have it.",
+              "Assemble tacos with salsa; avocado/yogurt optional."
+            ],
+          },
+        },
+        {
+          id: "sausage_kale_whitebeans",
+          name: "Sausage + Kale + White Beans (Skillet)",
+          protein: ["sausage"],
+          tags: ["cozy","one-pan"],
+          healthy: false, processed: true, refinedCarb: false, vegScore: 2,
+          recipe: {
+            timeMins: 30,
+            ingredients: [
+              ing("kale", 1, "bunch", "or bag"),
+              ing("beans", 2, "cans", "white beans"),
+              ing("garlic", 2, "cloves"),
+              ing("lemon", 1, "each", "optional", true),
+            ],
+            steps: [
+              "Brown sausage; remove.",
+              "Sauté garlic + kale; add beans with a splash of water.",
+              "Return sausage; simmer 5–7; lemon optional."
+            ],
+          },
+        },
+        {
+          id: "beef_burgers_salad_sweetpot",
+          name: "Beef Burgers + Big Salad + Sweet Potato Wedges",
+          protein: ["beef"],
+          tags: ["weekend","fun"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
+          recipe: {
+            timeMins: 40,
+            ingredients: [
+              ing("sweet potatoes", 2, "each"),
+              ing("salad greens", 1, "bag"),
+              ing("tomatoes", 2, "each"),
+              ing("cucumber", 1, "each"),
+              ing("burger buns", 4, "each", "optional", true),
+            ],
+            steps: [
+              "Roast sweet potato wedges at 425°F 25–30 min.",
+              "Form patties; cook to preference.",
+              "Make salad (greens + tomato + cucumber + lemon/olive oil).",
+              "Serve with buns optional."
             ],
           },
         },
       ];
 
-      // ✅ Keep this key stable across deploys to preserve device saves
+      // ✅ Keep stable for device saves across deploys
       const STORAGE_KEY = "tj-costco-planner-static-v26";
-      const OLD_KEYS = ["tj-costco-planner-static-v25"]; // optional migration helper
+      const OLD_KEYS = ["tj-costco-planner-static-v25"];
 
       function loadState() {
         try {
           let raw = localStorage.getItem(STORAGE_KEY);
-          // Migrate from older keys if needed (won't overwrite if current exists)
           if (!raw) {
             for (const k of OLD_KEYS) {
               const old = localStorage.getItem(k);
-              if (old) {
-                localStorage.setItem(STORAGE_KEY, old);
-                raw = old;
-                break;
-              }
+              if (old) { localStorage.setItem(STORAGE_KEY, old); raw = old; break; }
             }
           }
           return raw ? JSON.parse(raw) : null;
-        } catch {
-          return null;
-        }
+        } catch { return null; }
       }
-
-      function saveState(state) {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch {}
-      }
+      function saveState(state) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} }
 
       function startOfWeek(d = new Date()) {
         const date = new Date(d);
         const day = date.getDay();
         const diff = (day === 0 ? -6 : 1) - day; // Monday
         date.setDate(date.getDate() + diff);
-        date.setHours(0, 0, 0, 0);
+        date.setHours(0,0,0,0);
         return date;
       }
-
-      function fmtDate(d) {
-        return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
-      }
-
-      function clamp(n, a, b) {
-        return Math.max(a, Math.min(b, n));
-      }
-
-      function unique(arr) {
-        return Array.from(new Set((arr || []).filter(Boolean)));
-      }
-
-      function daysAgoISO(days) {
-        const d = new Date();
-        d.setDate(d.getDate() - days);
-        return d.toISOString();
-      }
+      function fmtDate(d) { return new Intl.DateTimeFormat(undefined, { month:"short", day:"numeric" }).format(d); }
+      function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+      function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
+      function daysAgoISO(days){ const d=new Date(); d.setDate(d.getDate()-days); return d.toISOString(); }
 
       function dayLabels(n) {
         const base = startOfWeek();
-        return Array.from({ length: n }).map((_, i) => {
-          const d = new Date(base);
-          d.setDate(d.getDate() + i);
-          const dow = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(d);
+        return Array.from({ length:n }).map((_,i)=>{
+          const d = new Date(base); d.setDate(d.getDate()+i);
+          const dow = new Intl.DateTimeFormat(undefined, { weekday:"short" }).format(d);
           return { label: `${dow} ${fmtDate(d)}`, date: d.toISOString() };
         });
       }
@@ -782,32 +600,27 @@
       }
 
       function scoreMeal(meal, ctx) {
-        const {
-          history,
-          proteinInventory,
-          lastProteins,
-          healthyMode,
-          noRepeatDays,
-          processedCap,
-          refinedCap,
-          processedSoFar,
-          refinedSoFar,
-        } = ctx;
+        const { history, proteinInventory, lastProteins, healthyMode, noRepeatDays, processedCap, refinedCap, processedSoFar, refinedSoFar, usedThisWeek } = ctx;
 
-        const recent = (history || [])
-          .filter((h) => new Date(h.date).getTime() >= new Date(daysAgoISO(noRepeatDays)).getTime())
-          .map((h) => h.mealId);
+        const recent = (history||[])
+          .filter(h => new Date(h.date).getTime() >= new Date(daysAgoISO(noRepeatDays)).getTime())
+          .map(h => h.mealId);
 
         const usedRecently = recent.includes(meal.id);
+        const usedInWeek = usedThisWeek.has(meal.id);
 
-        const availableProteins = (meal.protein || []).filter((p) => (proteinInventory[p] || 0) > 0);
+        const availableProteins = (meal.protein||[]).filter(p => (proteinInventory[p]||0) > 0);
         const proteinOk = availableProteins.length > 0;
 
-        const proteinPenalty = (meal.protein || []).some((p) => (lastProteins || []).includes(p)) ? -1 : 0;
+        const proteinPenalty = (meal.protein||[]).some(p => (lastProteins||[]).includes(p)) ? -1 : 0;
 
-        const healthyBonus = healthyMode
-          ? (meal.healthy ? 1.2 : -2) + (meal.processed ? -2.5 : 0) + (meal.vegScore || 0) * 0.35
-          : 0;
+        // Variety bonus: prefer meals with different tag families vs last couple meals
+        const varietyBonus = meal.vegScore ? (meal.vegScore * 0.25) : 0;
+
+        const healthyBonus =
+          healthyMode
+            ? (meal.healthy ? 1.2 : -2) + (meal.processed ? -2.5 : 0)
+            : 0;
 
         const capPenalty =
           (healthyMode && meal.processed && processedSoFar >= processedCap ? -100 : 0) +
@@ -815,47 +628,46 @@
 
         let score = 0;
         score += proteinOk ? 3 : -10;
-        score += usedRecently ? -3 : 2;
+        score += usedInWeek ? -999 : 0;              // ✅ hard prevent repeats in a week
+        score += usedRecently ? -4 : 2;              // ✅ strong avoid recent history repeats
         score += proteinPenalty;
         score += healthyBonus;
         score += capPenalty;
-        score += (meal.recipe?.ingredients?.length || 0) <= 7 ? 0.5 : 0;
+        score += varietyBonus;
+        score += (meal.recipe?.ingredients?.length || 0) <= 7 ? 0.4 : 0;
         return score;
       }
 
       function pickProtein(meal, proteinInventory, lastProteins, lbsPerDinner) {
-        const available = (meal.protein || [])
-          .filter((p) => (proteinInventory[p] || 0) >= lbsPerDinner)
-          .sort((a, b) => {
-            const ar = (lastProteins || []).includes(a) ? 1 : 0;
-            const br = (lastProteins || []).includes(b) ? 1 : 0;
+        const available = (meal.protein||[])
+          .filter(p => (proteinInventory[p]||0) >= lbsPerDinner)
+          .sort((a,b)=>{
+            const ar = (lastProteins||[]).includes(a) ? 1 : 0;
+            const br = (lastProteins||[]).includes(b) ? 1 : 0;
             if (ar !== br) return ar - br;
-            return (proteinInventory[b] || 0) - (proteinInventory[a] || 0);
+            return (proteinInventory[b]||0) - (proteinInventory[a]||0);
           });
-        return available[0] || (meal.protein || [])[0] || null;
+        return available[0] || (meal.protein||[])[0] || null;
       }
 
       function RecipeModal({ meal, onClose }) {
         return (
           <div className="modalBackdrop" onClick={onClose}>
-            <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal" onClick={(e)=>e.stopPropagation()}>
               <div className="modalHeader">
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 850, letterSpacing: "-0.01em" }}>{meal.name}</div>
-                  <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-                    {meal.recipe?.timeMins ? `${meal.recipe.timeMins} min` : ""}
-                    {meal.tags?.length ? ` • ${meal.tags.join(", ")}` : ""}
+                  <div style={{ fontSize:18, fontWeight:850, letterSpacing:"-0.01em" }}>{meal.name}</div>
+                  <div className="muted" style={{ fontSize:12, marginTop:3 }}>
+                    {meal.recipe?.timeMins ? `${meal.recipe.timeMins} min` : ""}{meal.tags?.length ? ` • ${meal.tags.join(", ")}` : ""}
                   </div>
                 </div>
-                <button className="btn" onClick={onClose}>
-                  Close
-                </button>
+                <button className="btn" onClick={onClose}>Close</button>
               </div>
               <div className="modalBody">
                 <div>
-                  <div style={{ fontWeight: 850, marginBottom: 8 }}>Ingredients</div>
+                  <div style={{ fontWeight:850, marginBottom:8 }}>Ingredients</div>
                   <ul>
-                    {(meal.recipe?.ingredients || []).map((i, idx) => (
+                    {(meal.recipe?.ingredients || []).map((i, idx)=>(
                       <li key={idx} style={{ opacity: i.optional ? 0.7 : 1 }}>
                         {formatLine(i)} {i.optional ? "(optional)" : ""}
                       </li>
@@ -863,9 +675,9 @@
                   </ul>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 850, marginBottom: 8 }}>Steps</div>
+                  <div style={{ fontWeight:850, marginBottom:8 }}>Steps</div>
                   <ol>
-                    {(meal.recipe?.steps || []).map((s, idx) => (
+                    {(meal.recipe?.steps || []).map((s, idx)=>(
                       <li key={idx}>{s}</li>
                     ))}
                   </ol>
@@ -880,13 +692,11 @@
         const saved = useMemo(() => loadState(), []);
 
         const [proteinInventory, setProteinInventory] = useState(
-          saved?.proteinInventory ?? { beef: 6, chicken: 8, turkey: 6, sausage: 3, pork: 4 }
+          saved?.proteinInventory ?? { beef:6, chicken:8, turkey:6, sausage:3, pork:4, salmon:4, shrimp:3 }
         );
 
         const [pantry, setPantry] = useState(saved?.pantry ?? DEFAULT_PANTRY);
         const [weeklyStaples, setWeeklyStaples] = useState(saved?.weeklyStaples ?? DEFAULT_WEEKLY_STAPLES);
-
-        // ✅ Fun snacks (optional)
         const [funSnacks, setFunSnacks] = useState(saved?.funSnacks ?? DEFAULT_FUN_SNACKS);
 
         const [weekNights, setWeekNights] = useState(saved?.weekNights ?? 5);
@@ -899,7 +709,7 @@
         const [noRepeatDays, setNoRepeatDays] = useState(saved?.noRepeatDays ?? 21);
         const [healthyMode, setHealthyMode] = useState(saved?.healthyMode ?? true);
         const [maxProcessedMeals, setMaxProcessedMeals] = useState(saved?.maxProcessedMeals ?? 1);
-        const [maxRefinedMeals, setMaxRefinedMeals] = useState(saved?.maxRefinedMeals ?? 1);
+        const [maxRefinedMeals, setMaxRefinedMeals] = useState(saved?.maxRefinedMeals ?? 2);
 
         const [meals] = useState(saved?.meals ?? DEFAULT_MEALS);
         const [plan, setPlan] = useState(saved?.plan ?? []);
@@ -908,98 +718,50 @@
         const [customPantry, setCustomPantry] = useState("");
         const [customWeekly, setCustomWeekly] = useState("");
         const [customSnack, setCustomSnack] = useState("");
-
         const [openRecipeFor, setOpenRecipeFor] = useState(null);
 
         useEffect(() => {
           saveState({
-            proteinInventory,
-            pantry,
-            weeklyStaples,
-            funSnacks,
-            weekNights,
-            leftoversNights,
-            avoid,
-            maleOz,
-            femaleOz,
-            noRepeatDays,
-            healthyMode,
-            maxProcessedMeals,
-            maxRefinedMeals,
-            meals,
-            plan,
-            history,
+            proteinInventory, pantry, weeklyStaples, funSnacks,
+            weekNights, leftoversNights, avoid,
+            maleOz, femaleOz,
+            noRepeatDays, healthyMode, maxProcessedMeals, maxRefinedMeals,
+            meals, plan, history
           });
-        }, [
-          proteinInventory,
-          pantry,
-          weeklyStaples,
-          funSnacks,
-          weekNights,
-          leftoversNights,
-          avoid,
-          maleOz,
-          femaleOz,
-          noRepeatDays,
-          healthyMode,
-          maxProcessedMeals,
-          maxRefinedMeals,
-          meals,
-          plan,
-          history,
-        ]);
+        }, [proteinInventory, pantry, weeklyStaples, funSnacks, weekNights, leftoversNights, avoid, maleOz, femaleOz, noRepeatDays, healthyMode, maxProcessedMeals, maxRefinedMeals, meals, plan, history]);
 
         const lbsPerDinner = lbsUsedPerDinner(maleOz, femaleOz);
-        const lastProteins = useMemo(
-          () => (history || []).slice(-2).map((h) => h.proteinId).filter(Boolean),
-          [history]
-        );
+        const lastProteins = useMemo(() => (history||[]).slice(-2).map(h => h.proteinId).filter(Boolean), [history]);
 
-        const planCards = useMemo(
-          () =>
-            plan.map((p) => {
-              const meal = meals.find((m) => m.id === p.mealId);
-              const proteinName = PROTEINS.find((x) => x.id === p.proteinId)?.name;
-              return {
-                ...p,
-                meal,
-                mealName: meal?.name ?? "Leftovers",
-                tags: meal?.tags ?? [],
-                proteinName: proteinName ?? (p.kind === "leftovers" ? "—" : "(Pick protein)"),
-              };
-            }),
-          [plan, meals]
-        );
+        const planCards = useMemo(() => plan.map(p => {
+          const meal = meals.find(m => m.id === p.mealId);
+          const proteinName = PROTEINS.find(x => x.id === p.proteinId)?.name;
+          return { ...p, meal, mealName: meal?.name ?? "Leftovers", tags: meal?.tags ?? [], proteinName: proteinName ?? (p.kind==="leftovers" ? "—" : "(Pick protein)") };
+        }), [plan, meals]);
 
         const groceryItems = useMemo(() => {
           const totals = new Map();
 
-          // Planned dinners
           for (const p of plan) {
             if (p.kind !== "meal") continue;
-            const meal = meals.find((m) => m.id === p.mealId);
+            const meal = meals.find(m => m.id === p.mealId);
             if (!meal?.recipe?.ingredients?.length) continue;
             for (const ingredient of meal.recipe.ingredients) sumIngredient(totals, ingredient, 1);
           }
 
-          // Weekly staples
           for (const s of weeklyStaples || []) sumIngredient(totals, ing(s, 1, "each"), 1);
-
-          // Fun snacks (optional)
           for (const s of funSnacks || []) sumIngredient(totals, ing(s, 1, "each"), 1);
 
           const out = [];
           for (const v of totals.values()) {
-            if (pantryCoversItem(pantry, v.name)) continue; // fuzzy pantry removal
+            if (pantryCoversItem(pantry, v.name)) continue;
             out.push(v);
           }
 
           const byAisle = {};
           for (const a of AISLES) byAisle[a] = [];
           for (const it of out) byAisle[aisleForItem(it.name)].push(it);
-          for (const a of AISLES) {
-            byAisle[a] = byAisle[a].sort((x, y) => normalizeName(x.name).localeCompare(normalizeName(y.name)));
-          }
+          for (const a of AISLES) byAisle[a] = byAisle[a].sort((x,y)=>normalizeName(x.name).localeCompare(normalizeName(y.name)));
           return byAisle;
         }, [plan, meals, weeklyStaples, funSnacks, pantry]);
 
@@ -1027,6 +789,8 @@
           let processedSoFar = 0;
           let refinedSoFar = 0;
 
+          const usedThisWeek = new Set();
+
           const leftoversSlots = new Set();
           if (leftovers > 0) {
             const picks = [Math.floor(nights / 2)];
@@ -1041,9 +805,10 @@
               continue;
             }
 
-            const candidates = meals.filter((m) => !avoid.includes(m.id));
+            const candidates = meals.filter(m => !avoid.includes(m.id));
+
             const scored = candidates
-              .map((m) => ({
+              .map(m => ({
                 m,
                 s: scoreMeal(m, {
                   history,
@@ -1051,40 +816,34 @@
                   lastProteins: simLast,
                   healthyMode,
                   noRepeatDays,
-                  processedCap: Number(maxProcessedMeals || 0),
-                  refinedCap: Number(maxRefinedMeals || 0),
+                  processedCap: Number(maxProcessedMeals||0),
+                  refinedCap: Number(maxRefinedMeals||0),
                   processedSoFar,
                   refinedSoFar,
-                }),
+                  usedThisWeek
+                })
               }))
-              .sort((a, b) => b.s - a.s);
+              .sort((a,b)=>b.s-a.s);
 
             const chosenMeal = scored[0]?.m || candidates[0];
             const chosenProtein = pickProtein(chosenMeal, simInventory, simLast, lbsPerDinner);
 
-            simInventory[chosenProtein] = roundToQuarter(
-              Math.max(0, (simInventory[chosenProtein] || 0) - lbsPerDinner)
-            );
+            simInventory[chosenProtein] = roundToQuarter(Math.max(0, (simInventory[chosenProtein]||0) - lbsPerDinner));
             if (healthyMode && chosenMeal.processed) processedSoFar++;
             if (healthyMode && chosenMeal.refinedCarb) refinedSoFar++;
 
-            simLast = unique([chosenProtein, ...simLast]).slice(0, 2);
-            newPlan.push({
-              ...labels[i],
-              kind: "meal",
-              mealId: chosenMeal.id,
-              proteinId: chosenProtein,
-              lbsUsed: lbsPerDinner,
-            });
+            simLast = unique([chosenProtein, ...simLast]).slice(0,2);
+            usedThisWeek.add(chosenMeal.id);
+
+            newPlan.push({ ...labels[i], kind:"meal", mealId: chosenMeal.id, proteinId: chosenProtein, lbsUsed: lbsPerDinner });
           }
 
           setPlan(newPlan);
         }
 
-        // Swap/decline a single meal slot
         function swapMealForDate(dateISO) {
-          setPlan((prevPlan) => {
-            const idx = prevPlan.findIndex((p) => p.date === dateISO);
+          setPlan(prevPlan => {
+            const idx = prevPlan.findIndex(p => p.date === dateISO);
             if (idx < 0) return prevPlan;
 
             const current = prevPlan[idx];
@@ -1094,28 +853,27 @@
             let processedSoFar = 0;
             let refinedSoFar = 0;
 
+            const usedThisWeek = new Set(prevPlan.filter(p=>p.kind==="meal").map(p=>p.mealId));
+            usedThisWeek.delete(current.mealId);
+
             for (let i = 0; i < prevPlan.length; i++) {
               if (i === idx) continue;
               const p = prevPlan[i];
               if (p.kind !== "meal") continue;
-              const m = meals.find((mm) => mm.id === p.mealId);
+              const m = meals.find(mm => mm.id === p.mealId);
               if (!m) continue;
 
-              if (p.proteinId) {
-                simInventory[p.proteinId] = roundToQuarter(
-                  Math.max(0, (simInventory[p.proteinId] || 0) - (p.lbsUsed || 0))
-                );
-              }
+              if (p.proteinId) simInventory[p.proteinId] = roundToQuarter(Math.max(0, (simInventory[p.proteinId]||0) - (p.lbsUsed||0)));
               if (healthyMode && m.processed) processedSoFar++;
               if (healthyMode && m.refinedCarb) refinedSoFar++;
             }
 
             const candidates = meals
-              .filter((m) => !avoid.includes(m.id))
-              .filter((m) => m.id !== current.mealId);
+              .filter(m => !avoid.includes(m.id))
+              .filter(m => m.id !== current.mealId);
 
             const scored = candidates
-              .map((m) => ({
+              .map(m => ({
                 m,
                 s: scoreMeal(m, {
                   history,
@@ -1123,19 +881,19 @@
                   lastProteins,
                   healthyMode,
                   noRepeatDays,
-                  processedCap: Number(maxProcessedMeals || 0),
-                  refinedCap: Number(maxRefinedMeals || 0),
+                  processedCap: Number(maxProcessedMeals||0),
+                  refinedCap: Number(maxRefinedMeals||0),
                   processedSoFar,
                   refinedSoFar,
-                }),
+                  usedThisWeek
+                })
               }))
-              .sort((a, b) => b.s - a.s);
+              .sort((a,b)=>b.s-a.s);
 
             const chosenMeal = scored[0]?.m;
             if (!chosenMeal) return prevPlan;
 
-            const chosenProtein =
-              pickProtein(chosenMeal, simInventory, lastProteins, lbsPerDinner) || chosenMeal.protein?.[0];
+            const chosenProtein = pickProtein(chosenMeal, simInventory, lastProteins, lbsPerDinner) || chosenMeal.protein?.[0];
 
             const next = [...prevPlan];
             next[idx] = { ...current, mealId: chosenMeal.id, proteinId: chosenProtein, lbsUsed: lbsPerDinner };
@@ -1145,71 +903,45 @@
 
         function markDone(entry) {
           if (entry.kind === "leftovers") {
-            setPlan((prev) => prev.filter((p) => p.date !== entry.date));
+            setPlan(prev => prev.filter(p => p.date !== entry.date));
             return;
           }
           if (entry.proteinId) {
-            setProteinInventory((prev) => ({
+            setProteinInventory(prev => ({
               ...prev,
-              [entry.proteinId]: roundToQuarter(
-                Math.max(0, (prev[entry.proteinId] || 0) - (entry.lbsUsed || 0))
-              ),
+              [entry.proteinId]: roundToQuarter(Math.max(0, (prev[entry.proteinId]||0) - (entry.lbsUsed||0)))
             }));
           }
-          setHistory((prev) => [
-            ...prev,
-            {
-              date: new Date().toISOString(),
-              mealId: entry.mealId,
-              proteinId: entry.proteinId,
-              lbsUsed: entry.lbsUsed,
-            },
-          ]);
-          setPlan((prev) => prev.filter((p) => p.date !== entry.date));
+          setHistory(prev => [...prev, { date: new Date().toISOString(), mealId: entry.mealId, proteinId: entry.proteinId, lbsUsed: entry.lbsUsed }]);
+          setPlan(prev => prev.filter(p => p.date !== entry.date));
         }
 
-        function toggleAvoid(mealId) {
-          setAvoid((prev) => (prev.includes(mealId) ? prev.filter((x) => x !== mealId) : [...prev, mealId]));
-        }
+        function toggleAvoid(mealId) { setAvoid(prev => prev.includes(mealId) ? prev.filter(x => x !== mealId) : [...prev, mealId]); }
 
         function addPantryItem() {
-          const v = customPantry.trim();
-          if (!v) return;
-          setPantry((prev) => unique([...(prev || []), v]).sort((a, b) => a.localeCompare(b)));
+          const v = customPantry.trim(); if (!v) return;
+          setPantry(prev => unique([...(prev||[]), v]).sort((a,b)=>a.localeCompare(b)));
           setCustomPantry("");
         }
-
-        function removePantryItem(item) {
-          setPantry((prev) => (prev || []).filter((x) => x !== item));
-        }
+        function removePantryItem(item) { setPantry(prev => (prev||[]).filter(x => x !== item)); }
 
         function addWeeklyItem() {
-          const v = customWeekly.trim();
-          if (!v) return;
-          setWeeklyStaples((prev) => unique([...(prev || []), v]).sort((a, b) => a.localeCompare(b)));
+          const v = customWeekly.trim(); if (!v) return;
+          setWeeklyStaples(prev => unique([...(prev||[]), v]).sort((a,b)=>a.localeCompare(b)));
           setCustomWeekly("");
         }
-
-        function removeWeeklyItem(item) {
-          setWeeklyStaples((prev) => (prev || []).filter((x) => x !== item));
-        }
+        function removeWeeklyItem(item) { setWeeklyStaples(prev => (prev||[]).filter(x => x !== item)); }
 
         function addSnack() {
-          const v = customSnack.trim();
-          if (!v) return;
-          setFunSnacks((prev) => unique([...(prev || []), v]).sort((a, b) => a.localeCompare(b)));
+          const v = customSnack.trim(); if (!v) return;
+          setFunSnacks(prev => unique([...(prev||[]), v]).sort((a,b)=>a.localeCompare(b)));
           setCustomSnack("");
         }
+        function removeSnack(item) { setFunSnacks(prev => (prev||[]).filter(x => x !== item)); }
 
-        function removeSnack(item) {
-          setFunSnacks((prev) => (prev || []).filter((x) => x !== item));
-        }
+        function exportList() { toClipboard(groceryText); }
 
-        function exportList() {
-          toClipboard(groceryText);
-        }
-
-        const recipe = useMemo(() => meals.find((m) => m.id === openRecipeFor) || null, [meals, openRecipeFor]);
+        const recipe = useMemo(() => meals.find(m => m.id === openRecipeFor) || null, [meals, openRecipeFor]);
 
         return (
           <div className="container">
@@ -1217,16 +949,12 @@
               <div className="title">
                 <h1>Costco + Trader Joe’s Planner</h1>
                 <p className="subtitle">
-                  Static V2.7 • Softer background • Fun snacks • Enter-to-add • Saves persist through deploys
+                  Static V2.8 • Salmon/Shrimp • More specific recipes • No repeats within week (and respects history)
                 </p>
               </div>
               <div className="actions">
-                <button className="btnPrimary" onClick={generatePlan}>
-                  Generate this week
-                </button>
-                <button className="btn" onClick={() => setPlan([])}>
-                  Clear plan
-                </button>
+                <button className="btnPrimary" onClick={generatePlan}>Generate this week</button>
+                <button className="btn" onClick={()=>setPlan([])}>Clear plan</button>
               </div>
             </div>
 
@@ -1237,38 +965,17 @@
                 <div className="row">
                   <label className="field">
                     <span className="muted">Weeknights</span>
-                    <input
-                      className="input"
-                      type="number"
-                      min="1"
-                      max="7"
-                      value={weekNights}
-                      onChange={(e) => setWeekNights(e.target.value)}
-                    />
+                    <input className="input" type="number" min="1" max="7" value={weekNights} onChange={e=>setWeekNights(e.target.value)} />
                   </label>
 
                   <label className="field">
                     <span className="muted">Leftovers</span>
-                    <input
-                      className="input"
-                      type="number"
-                      min="0"
-                      max="7"
-                      value={leftoversNights}
-                      onChange={(e) => setLeftoversNights(e.target.value)}
-                    />
+                    <input className="input" type="number" min="0" max="7" value={leftoversNights} onChange={e=>setLeftoversNights(e.target.value)} />
                   </label>
 
                   <label className="field">
                     <span className="muted">No-repeat days</span>
-                    <input
-                      className="input"
-                      type="number"
-                      min="7"
-                      max="42"
-                      value={noRepeatDays}
-                      onChange={(e) => setNoRepeatDays(e.target.value)}
-                    />
+                    <input className="input" type="number" min="7" max="42" value={noRepeatDays} onChange={e=>setNoRepeatDays(e.target.value)} />
                   </label>
                 </div>
 
@@ -1278,68 +985,32 @@
                     <div className="row" style={{ marginTop: 10 }}>
                       <label className="field">
                         <span className="muted">Male oz</span>
-                        <input
-                          className="input"
-                          type="number"
-                          min="4"
-                          max="16"
-                          value={maleOz}
-                          onChange={(e) => setMaleOz(e.target.value)}
-                        />
+                        <input className="input" type="number" min="4" max="16" value={maleOz} onChange={e=>setMaleOz(e.target.value)} />
                       </label>
                       <label className="field">
                         <span className="muted">Female oz</span>
-                        <input
-                          className="input"
-                          type="number"
-                          min="3"
-                          max="14"
-                          value={femaleOz}
-                          onChange={(e) => setFemaleOz(e.target.value)}
-                        />
+                        <input className="input" type="number" min="3" max="14" value={femaleOz} onChange={e=>setFemaleOz(e.target.value)} />
                       </label>
                     </div>
-                    <div className="kvs">
-                      Uses ~ <b>{lbsPerDinner} lb</b> per dinner (rounded to 0.25 lb)
-                    </div>
+                    <div className="kvs">Uses ~ <b>{lbsPerDinner} lb</b> per dinner (rounded to 0.25 lb)</div>
                   </div>
 
                   <div className="subCard">
                     <div className="subCardTitle">Healthy caps</div>
                     <div className="row" style={{ marginTop: 10 }}>
                       <label className="field">
-                        <input
-                          type="checkbox"
-                          checked={healthyMode}
-                          onChange={(e) => setHealthyMode(e.target.checked)}
-                        />
+                        <input type="checkbox" checked={healthyMode} onChange={e=>setHealthyMode(e.target.checked)} />
                         <span className="muted">Healthy mode</span>
                       </label>
 
                       <label className="field">
                         <span className="muted">Processed/week</span>
-                        <input
-                          className="input"
-                          type="number"
-                          min="0"
-                          max="7"
-                          value={maxProcessedMeals}
-                          onChange={(e) => setMaxProcessedMeals(e.target.value)}
-                          disabled={!healthyMode}
-                        />
+                        <input className="input" type="number" min="0" max="7" value={maxProcessedMeals} onChange={e=>setMaxProcessedMeals(e.target.value)} disabled={!healthyMode} />
                       </label>
 
                       <label className="field">
                         <span className="muted">Refined-carb/week</span>
-                        <input
-                          className="input"
-                          type="number"
-                          min="0"
-                          max="7"
-                          value={maxRefinedMeals}
-                          onChange={(e) => setMaxRefinedMeals(e.target.value)}
-                          disabled={!healthyMode}
-                        />
+                        <input className="input" type="number" min="0" max="7" value={maxRefinedMeals} onChange={e=>setMaxRefinedMeals(e.target.value)} disabled={!healthyMode} />
                       </label>
                     </div>
                   </div>
@@ -1347,39 +1018,15 @@
 
                 <div style={{ marginTop: 12, fontWeight: 850 }}>Costco proteins on hand (lbs)</div>
                 <div className="cardsGrid" style={{ marginTop: 10 }}>
-                  {PROTEINS.map((p) => (
-                    <div
-                      key={p.id}
-                      className="subCard"
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}
-                    >
+                  {PROTEINS.map(p=>(
+                    <div key={p.id} className="subCard" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
                       <div>
                         <div className="subCardTitle">{p.name}</div>
                         <div className="kvs">{proteinInventory[p.id] || 0} lb</div>
                       </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          className="miniBtn"
-                          onClick={() =>
-                            setProteinInventory((prev) => ({
-                              ...prev,
-                              [p.id]: roundToQuarter(Math.max(0, (prev[p.id] || 0) - 0.25)),
-                            }))
-                          }
-                        >
-                          −
-                        </button>
-                        <button
-                          className="miniBtn"
-                          onClick={() =>
-                            setProteinInventory((prev) => ({
-                              ...prev,
-                              [p.id]: roundToQuarter((prev[p.id] || 0) + 0.25),
-                            }))
-                          }
-                        >
-                          +
-                        </button>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button className="miniBtn" onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter(Math.max(0, (prev[p.id]||0)-0.25)) }))}>−</button>
+                        <button className="miniBtn" onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter((prev[p.id]||0)+0.25) }))}>+</button>
                       </div>
                     </div>
                   ))}
@@ -1387,29 +1034,25 @@
               </section>
 
               <section className="card">
-                <h2>Meals</h2>
+                <h2>Meals (more specific ideas)</h2>
                 <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-                  Use <b>Swap ↻</b> on a planned night to decline it and auto-generate a replacement (updates grocery list).
+                  These are “plates” like <b>protein + veg + side</b> (and won’t repeat in the same week). Use <b>Swap ↻</b> if you’re not feeling one.
                 </div>
 
                 <div className="cardsGrid">
-                  {meals.map((m) => (
+                  {meals.map(m=>(
                     <div key={m.id} className="subCard">
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
                         <div>
                           <div className="subCardTitle">{m.name}</div>
                           <div className="kvs">
-                            Proteins: {(m.protein || [])
-                              .map((id) => PROTEINS.find((p) => p.id === id)?.name || id)
-                              .join(", ")}
+                            Proteins: {(m.protein||[]).map(id => PROTEINS.find(p=>p.id===id)?.name || id).join(", ")}
                           </div>
-                          <div className="kvs">Tags: {(m.tags || []).join(", ")}</div>
+                          <div className="kvs">Tags: {(m.tags||[]).join(", ")}</div>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          <button className="btn" onClick={() => setOpenRecipeFor(m.id)}>
-                            Recipe
-                          </button>
-                          <button className={avoid.includes(m.id) ? "btnDanger" : "btn"} onClick={() => toggleAvoid(m.id)}>
+                        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                          <button className="btn" onClick={()=>setOpenRecipeFor(m.id)}>Recipe</button>
+                          <button className={avoid.includes(m.id) ? "btnDanger" : "btn"} onClick={()=>toggleAvoid(m.id)}>
                             {avoid.includes(m.id) ? "Avoid" : "Include"}
                           </button>
                         </div>
@@ -1421,39 +1064,29 @@
 
               <section className="card">
                 <h2>This week’s plan</h2>
-                {planCards.length === 0 ? (
-                  <div className="muted" style={{ marginTop: 10 }}>
-                    No plan yet. Click <b>Generate this week</b>.
-                  </div>
+                {planCards.length===0 ? (
+                  <div className="muted" style={{ marginTop: 10 }}>No plan yet. Click <b>Generate this week</b>.</div>
                 ) : (
                   <div className="cardsGrid">
-                    {planCards.map((p) => (
+                    {planCards.map(p=>(
                       <div key={p.date} className="subCard">
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
                           <div>
                             <div className="subCardTitle">{p.label}</div>
-                            <div style={{ marginTop: 6 }}>{p.kind === "leftovers" ? "Leftovers Night" : p.mealName}</div>
-                            {p.kind === "meal" ? (
-                              <div className="kvs">
-                                Protein: <b>{p.proteinName}</b> • Uses: <b>{p.lbsUsed} lb</b>
-                              </div>
+                            <div style={{ marginTop: 6 }}>{p.kind==="leftovers" ? "Leftovers Night" : p.mealName}</div>
+                            {p.kind==="meal" ? (
+                              <div className="kvs">Protein: <b>{p.proteinName}</b> • Uses: <b>{p.lbsUsed} lb</b></div>
                             ) : (
                               <div className="kvs">Use what’s in the fridge</div>
                             )}
                           </div>
 
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 130 }}>
-                            <button className="btnGood" onClick={() => markDone(p)}>
-                              Done ✅
-                            </button>
-                            {p.kind === "meal" ? (
+                          <div style={{ display:"flex", flexDirection:"column", gap:8, minWidth: 130 }}>
+                            <button className="btnGood" onClick={()=>markDone(p)}>Done ✅</button>
+                            {p.kind==="meal" ? (
                               <>
-                                <button className="btn" onClick={() => setOpenRecipeFor(p.mealId)}>
-                                  View recipe
-                                </button>
-                                <button className="btn" onClick={() => swapMealForDate(p.date)}>
-                                  Swap ↻
-                                </button>
+                                <button className="btn" onClick={()=>setOpenRecipeFor(p.mealId)}>View recipe</button>
+                                <button className="btn" onClick={()=>swapMealForDate(p.date)}>Swap ↻</button>
                               </>
                             ) : null}
                           </div>
@@ -1465,36 +1098,26 @@
               </section>
 
               <section className="card">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 12,
-                    flexWrap: "wrap",
-                  }}
-                >
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, flexWrap:"wrap" }}>
                   <div>
                     <h2>Trader Joe’s list (with quantities)</h2>
                     <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-                      Summed across planned meals + weekly staples + fun snacks, <b>minus pantry</b> (fuzzy match supported).
+                      Summed across planned meals + weekly staples + fun snacks, <b>minus pantry</b> (fuzzy match).
                     </div>
                   </div>
-                  <button className="btn" onClick={exportList}>
-                    Copy list
-                  </button>
+                  <button className="btn" onClick={exportList}>Copy list</button>
                 </div>
 
                 <div className="split" style={{ marginTop: 12 }}>
                   <div className="subCard">
-                    {AISLES.map((a) => {
+                    {AISLES.map(a=>{
                       const items = groceryItems[a] || [];
                       if (!items.length) return null;
                       return (
                         <div key={a} style={{ marginBottom: 12 }}>
                           <div style={{ fontWeight: 900, marginBottom: 6 }}>{a}</div>
                           <ul>
-                            {items.map((it, idx) => (
+                            {items.map((it,idx)=>(
                               <li key={idx}>{formatLine(it)}</li>
                             ))}
                           </ul>
@@ -1509,94 +1132,61 @@
                       <input
                         className="inputWide"
                         value={customWeekly}
-                        onChange={(e) => setCustomWeekly(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addWeeklyItem();
-                          }
-                        }}
+                        onChange={e=>setCustomWeekly(e.target.value)}
+                        onKeyDown={(e)=>{ if(e.key==="Enter"){ e.preventDefault(); addWeeklyItem(); } }}
                         placeholder="Add a weekly staple…"
                       />
-                      <button className="btn" onClick={addWeeklyItem}>
-                        Add
-                      </button>
+                      <button className="btn" onClick={addWeeklyItem}>Add</button>
                     </div>
                     <div className="pillRow">
-                      {(weeklyStaples || []).map((it) => (
+                      {(weeklyStaples||[]).map(it=>(
                         <span key={it} className="pill">
                           {it}
-                          <button onClick={() => removeWeeklyItem(it)} aria-label={`remove ${it}`}>
-                            ×
-                          </button>
+                          <button onClick={()=>removeWeeklyItem(it)} aria-label={`remove ${it}`}>×</button>
                         </span>
                       ))}
                     </div>
 
-                    <div className="subCardTitle" style={{ marginTop: 14 }}>
-                      Fun snacks (optional)
-                    </div>
-                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                      A couple “nice to have” items — included in the list as <b>1 each</b>.
-                    </div>
+                    <div className="subCardTitle" style={{ marginTop: 14 }}>Fun snacks (optional)</div>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Included as <b>1 each</b> in your list.</div>
                     <div className="row">
                       <input
                         className="inputWide"
                         value={customSnack}
-                        onChange={(e) => setCustomSnack(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addSnack();
-                          }
-                        }}
+                        onChange={e=>setCustomSnack(e.target.value)}
+                        onKeyDown={(e)=>{ if(e.key==="Enter"){ e.preventDefault(); addSnack(); } }}
                         placeholder="Add a fun snack…"
                       />
-                      <button className="btn" onClick={addSnack}>
-                        Add
-                      </button>
+                      <button className="btn" onClick={addSnack}>Add</button>
                     </div>
                     <div className="pillRow">
-                      {(funSnacks || []).map((it) => (
+                      {(funSnacks||[]).map(it=>(
                         <span key={it} className="pill">
                           {it}
-                          <button onClick={() => removeSnack(it)} aria-label={`remove ${it}`}>
-                            ×
-                          </button>
+                          <button onClick={()=>removeSnack(it)} aria-label={`remove ${it}`}>×</button>
                         </span>
                       ))}
                     </div>
 
-                    <div className="subCardTitle" style={{ marginTop: 14 }}>
-                      Pantry staples (excluded)
-                    </div>
+                    <div className="subCardTitle" style={{ marginTop: 14 }}>Pantry staples (excluded)</div>
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                      Tip: add broad categories like <b>“yogurt”</b>, <b>“milk”</b>, <b>“cheese”</b>.
+                      Tip: add broad categories like <b>yogurt</b>, <b>rice</b>, <b>pasta</b>, <b>soy sauce</b>.
                     </div>
                     <div className="row">
                       <input
                         className="inputWide"
                         value={customPantry}
-                        onChange={(e) => setCustomPantry(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addPantryItem();
-                          }
-                        }}
+                        onChange={e=>setCustomPantry(e.target.value)}
+                        onKeyDown={(e)=>{ if(e.key==="Enter"){ e.preventDefault(); addPantryItem(); } }}
                         placeholder="Add a pantry staple…"
                       />
-                      <button className="btn" onClick={addPantryItem}>
-                        Add
-                      </button>
+                      <button className="btn" onClick={addPantryItem}>Add</button>
                     </div>
                     <div className="pillRow">
-                      {(pantry || []).map((it) => (
+                      {(pantry||[]).map(it=>(
                         <span key={it} className="pill">
                           {it}
-                          <button onClick={() => removePantryItem(it)} aria-label={`remove ${it}`}>
-                            ×
-                          </button>
+                          <button onClick={()=>removePantryItem(it)} aria-label={`remove ${it}`}>×</button>
                         </span>
                       ))}
                     </div>
@@ -1605,7 +1195,7 @@
               </section>
             </div>
 
-            {recipe ? <RecipeModal meal={recipe} onClose={() => setOpenRecipeFor(null)} /> : null}
+            {recipe ? <RecipeModal meal={recipe} onClose={()=>setOpenRecipeFor(null)} /> : null}
           </div>
         );
       }
