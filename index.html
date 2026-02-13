@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Costco + Trader Joe’s Planner (V2.5)</title>
+    <title>Costco + Trader Joe’s Planner (Static V2.6)</title>
 
     <!-- React (UMD) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -13,10 +13,279 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-      body { margin: 0; background: #fafafa; }
-      button { font: inherit; }
-      input, textarea { font: inherit; }
+      :root {
+        --bg: #0b0f19;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel2: rgba(255, 255, 255, 0.09);
+        --border: rgba(255, 255, 255, 0.12);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        --radius: 18px;
+        --radius2: 14px;
+        --ring: 0 0 0 3px rgba(99, 102, 241, 0.18);
+        --accent: rgba(99, 102, 241, 0.9);
+        --accent2: rgba(16, 185, 129, 0.9);
+        --danger: rgba(239, 68, 68, 0.92);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(1200px 600px at 10% 0%, rgba(99,102,241,0.35), transparent 55%),
+          radial-gradient(900px 500px at 100% 20%, rgba(16,185,129,0.25), transparent 55%),
+          radial-gradient(900px 500px at 30% 100%, rgba(245,158,11,0.18), transparent 55%),
+          var(--bg);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      }
+
       a { color: inherit; }
+
+      input, textarea {
+        background: rgba(255,255,255,0.06);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--radius2);
+        outline: none;
+      }
+
+      input:focus, textarea:focus {
+        border-color: rgba(99,102,241,0.55);
+        box-shadow: var(--ring);
+      }
+
+      button {
+        border-radius: var(--radius2);
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.07);
+        color: var(--text);
+        cursor: pointer;
+        transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+      }
+
+      button:hover { background: rgba(255,255,255,0.11); }
+      button:active { transform: translateY(1px); }
+
+      .container {
+        padding: 18px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .title {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      @media (min-width: 980px) {
+        .split {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.045));
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      .muted { color: var(--muted); }
+
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 10px;
+      }
+
+      .field {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .pillRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border);
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.06);
+      }
+
+      .pill button {
+        border: none;
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+        line-height: 1;
+        opacity: 0.75;
+      }
+
+      .input {
+        padding: 10px 12px;
+        width: 110px;
+      }
+      .inputWide {
+        padding: 10px 12px;
+        width: 100%;
+      }
+
+      .btnPrimary {
+        background: linear-gradient(135deg, rgba(99,102,241,0.95), rgba(59,130,246,0.92));
+        border-color: rgba(99,102,241,0.65);
+      }
+
+      .btnGood {
+        background: linear-gradient(135deg, rgba(16,185,129,0.95), rgba(34,197,94,0.9));
+        border-color: rgba(16,185,129,0.6);
+      }
+
+      .btnDanger {
+        background: rgba(239,68,68,0.16);
+        border-color: rgba(239,68,68,0.45);
+        color: rgba(255,255,255,0.92);
+      }
+
+      .btn, .btnPrimary, .btnGood, .btnDanger {
+        padding: 10px 12px;
+      }
+
+      .miniBtn {
+        padding: 6px 10px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.06);
+      }
+
+      .cardsGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .subCard {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+      }
+
+      .subCardTitle {
+        font-weight: 750;
+        letter-spacing: -0.01em;
+      }
+
+      .kvs {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .modalBackdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.42);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        z-index: 50;
+      }
+
+      .modal {
+        width: 100%;
+        max-width: 800px;
+        max-height: 86vh;
+        overflow: auto;
+        border-radius: 18px;
+        background: rgba(15, 20, 32, 0.95);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .modalHeader {
+        padding: 14px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .modalBody {
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      @media (min-width: 900px) {
+        .modalBody {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      ul, ol { margin: 0; padding-left: 18px; }
+      li { padding: 3px 0; }
     </style>
   </head>
 
@@ -49,6 +318,37 @@
         "Produce","Meat/Seafood","Dairy","Pantry","Frozen","Bakery","Snacks","Beverages","Other",
       ];
 
+      function normalizeName(name) {
+        return (name || "").toLowerCase().trim();
+      }
+
+      function cleanText(s) {
+        return (s || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9 ]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      // ✅ Pantry fuzzy cover: pantry term matches item if it is equal OR included either way.
+      // Example: "yogurt" covers "greek yogurt" and "plain greek yogurt"
+      function pantryCoversItem(pantryList, itemName) {
+        const item = cleanText(itemName);
+        if (!item) return false;
+
+        const terms = (pantryList || []).map(cleanText).filter(Boolean);
+
+        for (const t of terms) {
+          if (t === item) return true;
+          if (item.includes(t)) return true;
+          if (t.includes(item)) return true;
+
+          // small domain helpers
+          if (t === "yogurt" && item.includes("yogurt")) return true;
+        }
+        return false;
+      }
+
       function aisleForItem(item) {
         const s = (item || "").toLowerCase();
         const has = (...words) => words.some((w) => s.includes(w));
@@ -63,13 +363,8 @@
         return "Other";
       }
 
-      // Ingredient helper
       function ing(name, qty, unit, note, optional = false) {
         return { name, qty, unit, note, optional };
-      }
-
-      function normalizeName(name) {
-        return (name || "").toLowerCase().trim();
       }
 
       function roundNice(n) {
@@ -100,6 +395,7 @@
       function roundToQuarter(x) {
         return Math.round(x * 4) / 4;
       }
+
       function lbsUsedPerDinner(maleOz, femaleOz) {
         const totalOz = (Number(maleOz) || 0) + (Number(femaleOz) || 0);
         return roundToQuarter(totalOz / 16);
@@ -265,7 +561,7 @@
         },
       ];
 
-      const STORAGE_KEY = "tj-costco-planner-static-v25";
+      const STORAGE_KEY = "tj-costco-planner-static-v26";
 
       function loadState() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }
@@ -279,7 +575,7 @@
       function startOfWeek(d = new Date()) {
         const date = new Date(d);
         const day = date.getDay();
-        const diff = (day === 0 ? -6 : 1) - day; // Monday start
+        const diff = (day === 0 ? -6 : 1) - day; // Monday
         date.setDate(date.getDate() + diff);
         date.setHours(0,0,0,0);
         return date;
@@ -313,19 +609,28 @@
       }
 
       function scoreMeal(meal, ctx) {
-        const { history, proteinInventory, lastProteins, healthyMode, noRepeatDays, processedCap, refinedCap, processedSoFar, refinedSoFar } = ctx;
+        const {
+          history, proteinInventory, lastProteins,
+          healthyMode, noRepeatDays,
+          processedCap, refinedCap,
+          processedSoFar, refinedSoFar
+        } = ctx;
 
         const recent = (history||[])
           .filter(h => new Date(h.date).getTime() >= new Date(daysAgoISO(noRepeatDays)).getTime())
           .map(h => h.mealId);
 
         const usedRecently = recent.includes(meal.id);
+
         const availableProteins = (meal.protein||[]).filter(p => (proteinInventory[p]||0) > 0);
         const proteinOk = availableProteins.length > 0;
 
         const proteinPenalty = (meal.protein||[]).some(p => (lastProteins||[]).includes(p)) ? -1 : 0;
 
-        const healthyBonus = healthyMode ? (meal.healthy ? 1.2 : -2) + (meal.processed ? -2.5 : 0) + (meal.vegScore||0)*0.35 : 0;
+        const healthyBonus =
+          healthyMode
+            ? (meal.healthy ? 1.2 : -2) + (meal.processed ? -2.5 : 0) + (meal.vegScore||0)*0.35
+            : 0;
 
         const capPenalty =
           (healthyMode && meal.processed && processedSoFar >= processedCap ? -100 : 0) +
@@ -338,7 +643,6 @@
         score += healthyBonus;
         score += capPenalty;
         score += (meal.recipe?.ingredients?.length || 0) <= 7 ? 0.5 : 0;
-
         return score;
       }
 
@@ -352,6 +656,44 @@
             return (proteinInventory[b]||0) - (proteinInventory[a]||0);
           });
         return available[0] || (meal.protein||[])[0] || null;
+      }
+
+      function RecipeModal({ meal, onClose }) {
+        return (
+          <div className="modalBackdrop" onClick={onClose}>
+            <div className="modal" onClick={(e)=>e.stopPropagation()}>
+              <div className="modalHeader">
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 850, letterSpacing: "-0.01em" }}>{meal.name}</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
+                    {meal.recipe?.timeMins ? `${meal.recipe.timeMins} min` : ""}{meal.tags?.length ? ` • ${meal.tags.join(", ")}` : ""}
+                  </div>
+                </div>
+                <button className="btn" onClick={onClose}>Close</button>
+              </div>
+              <div className="modalBody">
+                <div>
+                  <div style={{ fontWeight: 850, marginBottom: 8 }}>Ingredients</div>
+                  <ul>
+                    {(meal.recipe?.ingredients || []).map((i, idx)=>(
+                      <li key={idx} style={{ opacity: i.optional ? 0.7 : 1 }}>
+                        {formatLine(i)} {i.optional ? "(optional)" : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 850, marginBottom: 8 }}>Steps</div>
+                  <ol>
+                    {(meal.recipe?.steps || []).map((s, idx)=>(
+                      <li key={idx}>{s}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       }
 
       function App() {
@@ -373,7 +715,7 @@
         const [maxProcessedMeals, setMaxProcessedMeals] = useState(saved?.maxProcessedMeals ?? 1);
         const [maxRefinedMeals, setMaxRefinedMeals] = useState(saved?.maxRefinedMeals ?? 1);
 
-        const [meals, setMeals] = useState(saved?.meals ?? DEFAULT_MEALS);
+        const [meals] = useState(saved?.meals ?? DEFAULT_MEALS);
         const [plan, setPlan] = useState(saved?.plan ?? []);
         const [history, setHistory] = useState(saved?.history ?? []);
 
@@ -400,6 +742,7 @@
           return { ...p, meal, mealName: meal?.name ?? "Leftovers", tags: meal?.tags ?? [], proteinName: proteinName ?? (p.kind==="leftovers" ? "—" : "(Pick protein)") };
         }), [plan, meals]);
 
+        // ✅ Grocery list with fuzzy pantry removal
         const groceryItems = useMemo(() => {
           const totals = new Map();
 
@@ -412,10 +755,9 @@
 
           for (const s of weeklyStaples || []) sumIngredient(totals, ing(s, 1, "each"), 1);
 
-          const pantryLower = new Set((pantry||[]).map(x => normalizeName(x)));
           const out = [];
           for (const v of totals.values()) {
-            if (pantryLower.has(normalizeName(v.name))) continue;
+            if (pantryCoversItem(pantry, v.name)) continue; // 🔥 FIX
             out.push(v);
           }
 
@@ -489,6 +831,70 @@
           setPlan(newPlan);
         }
 
+        // ✅ Swap/Decline a single meal slot and recompute grocery list automatically
+        function swapMealForDate(dateISO) {
+          setPlan(prevPlan => {
+            const idx = prevPlan.findIndex(p => p.date === dateISO);
+            if (idx < 0) return prevPlan;
+
+            const current = prevPlan[idx];
+            if (current.kind !== "meal") return prevPlan;
+
+            // simulate inventory + caps for other meals in the plan
+            const simInventory = { ...proteinInventory };
+            let processedSoFar = 0;
+            let refinedSoFar = 0;
+
+            for (let i = 0; i < prevPlan.length; i++) {
+              if (i === idx) continue;
+              const p = prevPlan[i];
+              if (p.kind !== "meal") continue;
+              const m = meals.find(mm => mm.id === p.mealId);
+              if (!m) continue;
+
+              if (p.proteinId) {
+                simInventory[p.proteinId] = roundToQuarter(
+                  Math.max(0, (simInventory[p.proteinId] || 0) - (p.lbsUsed || 0))
+                );
+              }
+              if (healthyMode && m.processed) processedSoFar++;
+              if (healthyMode && m.refinedCarb) refinedSoFar++;
+            }
+
+            const candidates = meals
+              .filter(m => !avoid.includes(m.id))
+              .filter(m => m.id !== current.mealId);
+
+            const scored = candidates
+              .map(m => ({
+                m,
+                s: scoreMeal(m, {
+                  history,
+                  proteinInventory: simInventory,
+                  lastProteins,
+                  healthyMode,
+                  noRepeatDays,
+                  processedCap: Number(maxProcessedMeals || 0),
+                  refinedCap: Number(maxRefinedMeals || 0),
+                  processedSoFar,
+                  refinedSoFar,
+                })
+              }))
+              .sort((a,b)=>b.s-a.s);
+
+            const chosenMeal = scored[0]?.m;
+            if (!chosenMeal) return prevPlan;
+
+            const chosenProtein =
+              pickProtein(chosenMeal, simInventory, lastProteins, lbsPerDinner) ||
+              chosenMeal.protein?.[0];
+
+            const next = [...prevPlan];
+            next[idx] = { ...current, mealId: chosenMeal.id, proteinId: chosenProtein, lbsUsed: lbsPerDinner };
+            return next;
+          });
+        }
+
         function markDone(entry) {
           if (entry.kind === "leftovers") {
             setPlan(prev => prev.filter(p => p.date !== entry.date));
@@ -533,104 +939,111 @@
         const recipe = useMemo(() => meals.find(m => m.id === openRecipeFor) || null, [meals, openRecipeFor]);
 
         return (
-          <div style={{ fontFamily:"ui-sans-serif, system-ui", padding:16, maxWidth:1200, margin:"0 auto" }}>
-            <header style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"baseline", justifyContent:"space-between" }}>
-              <div>
-                <h1 style={{ margin:0, fontSize:28 }}>Costco + Trader Joe’s Planner</h1>
-                <p style={{ marginTop:6, opacity:0.8 }}>Recipes + summed quantities. No build step (static).</p>
+          <div className="container">
+            <div className="topbar">
+              <div className="title">
+                <h1>Costco + Trader Joe’s Planner</h1>
+                <p className="subtitle">Static V2.6 • Pantry fuzzy match • Swap meals • Sleek UI</p>
               </div>
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                <button onClick={generatePlan} style={btnPrimary}>Generate this week</button>
-                <button onClick={()=>setPlan([])} style={btn}>Clear plan</button>
+              <div className="actions">
+                <button className="btnPrimary" onClick={generatePlan}>Generate this week</button>
+                <button className="btn" onClick={()=>setPlan([])}>Clear plan</button>
               </div>
-            </header>
+            </div>
 
-            <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:12, marginTop:12 }}>
-              <section style={card}>
-                <h2 style={h2}>Setup</h2>
+            <div className="grid">
+              <section className="card">
+                <h2>Setup</h2>
 
-                <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center", marginTop:8 }}>
-                  <label>Weeknights:&nbsp;
-                    <input type="number" min="1" max="7" value={weekNights} onChange={e=>setWeekNights(e.target.value)} style={input} />
+                <div className="row">
+                  <label className="field">
+                    <span className="muted">Weeknights</span>
+                    <input className="input" type="number" min="1" max="7" value={weekNights} onChange={e=>setWeekNights(e.target.value)} />
                   </label>
-                  <label>Leftovers:&nbsp;
-                    <input type="number" min="0" max="7" value={leftoversNights} onChange={e=>setLeftoversNights(e.target.value)} style={input} />
+
+                  <label className="field">
+                    <span className="muted">Leftovers</span>
+                    <input className="input" type="number" min="0" max="7" value={leftoversNights} onChange={e=>setLeftoversNights(e.target.value)} />
                   </label>
-                  <label>No-repeat days:&nbsp;
-                    <input type="number" min="7" max="42" value={noRepeatDays} onChange={e=>setNoRepeatDays(e.target.value)} style={input} />
+
+                  <label className="field">
+                    <span className="muted">No-repeat days</span>
+                    <input className="input" type="number" min="7" max="42" value={noRepeatDays} onChange={e=>setNoRepeatDays(e.target.value)} />
                   </label>
                 </div>
 
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12 }}>
-                  <div>
-                    <h3 style={h3}>2-person portion math (raw protein)</h3>
-                    <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:8 }}>
-                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
-                        Male oz:
-                        <input type="number" min="4" max="16" value={maleOz} onChange={e=>setMaleOz(e.target.value)} style={input} />
+                <div className="split" style={{ marginTop: 12 }}>
+                  <div className="subCard">
+                    <div className="subCardTitle">2-person portion math (raw protein)</div>
+                    <div className="row" style={{ marginTop: 10 }}>
+                      <label className="field">
+                        <span className="muted">Male oz</span>
+                        <input className="input" type="number" min="4" max="16" value={maleOz} onChange={e=>setMaleOz(e.target.value)} />
                       </label>
-                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
-                        Female oz:
-                        <input type="number" min="3" max="14" value={femaleOz} onChange={e=>setFemaleOz(e.target.value)} style={input} />
+                      <label className="field">
+                        <span className="muted">Female oz</span>
+                        <input className="input" type="number" min="3" max="14" value={femaleOz} onChange={e=>setFemaleOz(e.target.value)} />
                       </label>
                     </div>
-                    <div style={{ marginTop:8, fontSize:12, opacity:0.75 }}>Uses ~{lbsPerDinner} lb protein per dinner (rounded to 0.25 lb).</div>
+                    <div className="kvs">Uses ~ <b>{lbsPerDinner} lb</b> per dinner (rounded to 0.25 lb)</div>
                   </div>
 
-                  <div>
-                    <h3 style={h3}>Healthy caps</h3>
-                    <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:8 }}>
-                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <div className="subCard">
+                    <div className="subCardTitle">Healthy caps</div>
+                    <div className="row" style={{ marginTop: 10 }}>
+                      <label className="field">
                         <input type="checkbox" checked={healthyMode} onChange={e=>setHealthyMode(e.target.checked)} />
-                        Healthy mode
+                        <span className="muted">Healthy mode</span>
                       </label>
-                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
-                        Processed/week:
-                        <input type="number" min="0" max="7" value={maxProcessedMeals} onChange={e=>setMaxProcessedMeals(e.target.value)} style={input} disabled={!healthyMode} />
+
+                      <label className="field">
+                        <span className="muted">Processed/week</span>
+                        <input className="input" type="number" min="0" max="7" value={maxProcessedMeals} onChange={e=>setMaxProcessedMeals(e.target.value)} disabled={!healthyMode} />
                       </label>
-                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
-                        Refined-carb/week:
-                        <input type="number" min="0" max="7" value={maxRefinedMeals} onChange={e=>setMaxRefinedMeals(e.target.value)} style={input} disabled={!healthyMode} />
+
+                      <label className="field">
+                        <span className="muted">Refined-carb/week</span>
+                        <input className="input" type="number" min="0" max="7" value={maxRefinedMeals} onChange={e=>setMaxRefinedMeals(e.target.value)} disabled={!healthyMode} />
                       </label>
                     </div>
                   </div>
                 </div>
 
-                <h3 style={{ ...h3, marginTop:12 }}>Costco proteins on hand (lbs)</h3>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(170px, 1fr))", gap:10, marginTop:8 }}>
+                <div style={{ marginTop: 12, fontWeight: 850 }}>Costco proteins on hand (lbs)</div>
+                <div className="cardsGrid" style={{ marginTop: 10 }}>
                   {PROTEINS.map(p=>(
-                    <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, border:"1px solid #e5e7eb", borderRadius:12, padding:10 }}>
+                    <div key={p.id} className="subCard" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap: 10 }}>
                       <div>
-                        <div style={{ fontWeight:650 }}>{p.name}</div>
-                        <div style={{ fontSize:12, opacity:0.75 }}>{proteinInventory[p.id] || 0} lb</div>
+                        <div className="subCardTitle">{p.name}</div>
+                        <div className="kvs">{proteinInventory[p.id] || 0} lb</div>
                       </div>
-                      <div style={{ display:"flex", gap:6 }}>
-                        <button style={mini} onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter(Math.max(0, (prev[p.id]||0)-0.25)) }))}>−</button>
-                        <button style={mini} onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter((prev[p.id]||0)+0.25) }))}>+</button>
+                      <div style={{ display:"flex", gap: 8 }}>
+                        <button className="miniBtn" onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter(Math.max(0, (prev[p.id]||0)-0.25)) }))}>−</button>
+                        <button className="miniBtn" onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter((prev[p.id]||0)+0.25) }))}>+</button>
                       </div>
                     </div>
                   ))}
                 </div>
               </section>
 
-              <section style={card}>
-                <h2 style={h2}>Meals (recipes)</h2>
-                <div style={{ marginTop:6, opacity:0.8 }}>Click Recipe to view ingredients + steps. Toggle Avoid to reduce repeats.</div>
+              <section className="card">
+                <h2>Meals</h2>
+                <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                  Use <b>Swap ↻</b> on a planned night to decline it and auto-generate a replacement (updates grocery list).
+                </div>
 
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:10, marginTop:10 }}>
+                <div className="cardsGrid">
                   {meals.map(m=>(
-                    <div key={m.id} style={{ border:"1px solid #e5e7eb", borderRadius:12, padding:12 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                    <div key={m.id} className="subCard">
+                      <div style={{ display:"flex", justifyContent:"space-between", gap: 10 }}>
                         <div>
-                          <div style={{ fontWeight:700 }}>{m.name}</div>
-                          <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>
-                            Proteins: {(m.protein||[]).map(id => PROTEINS.find(p=>p.id===id)?.name || id).join(", ")}
-                          </div>
-                          <div style={{ fontSize:12, opacity:0.7, marginTop:2 }}>Tags: {(m.tags||[]).join(", ")}</div>
+                          <div className="subCardTitle">{m.name}</div>
+                          <div className="kvs">Proteins: {(m.protein||[]).map(id => PROTEINS.find(p=>p.id===id)?.name || id).join(", ")}</div>
+                          <div className="kvs">Tags: {(m.tags||[]).join(", ")}</div>
                         </div>
-                        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                          <button style={btn} onClick={()=>setOpenRecipeFor(m.id)}>Recipe</button>
-                          <button style={avoid.includes(m.id) ? btnDanger : btn} onClick={()=>toggleAvoid(m.id)}>
+                        <div style={{ display:"flex", flexDirection:"column", gap: 8 }}>
+                          <button className="btn" onClick={()=>setOpenRecipeFor(m.id)}>Recipe</button>
+                          <button className={avoid.includes(m.id) ? "btnDanger" : "btn"} onClick={()=>toggleAvoid(m.id)}>
                             {avoid.includes(m.id) ? "Avoid" : "Include"}
                           </button>
                         </div>
@@ -640,33 +1053,35 @@
                 </div>
               </section>
 
-              <section style={card}>
-                <h2 style={h2}>This week’s plan</h2>
+              <section className="card">
+                <h2>This week’s plan</h2>
                 {planCards.length===0 ? (
-                  <div style={{ opacity:0.75 }}>No plan yet. Click <b>Generate this week</b>.</div>
+                  <div className="muted" style={{ marginTop: 10 }}>No plan yet. Click <b>Generate this week</b>.</div>
                 ) : (
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:10, marginTop:10 }}>
+                  <div className="cardsGrid">
                     {planCards.map(p=>(
-                      <div key={p.date} style={{ border:"1px solid #e5e7eb", borderRadius:12, padding:12 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                      <div key={p.date} className="subCard">
+                        <div style={{ display:"flex", justifyContent:"space-between", gap: 10 }}>
                           <div>
-                            <div style={{ fontWeight:700 }}>{p.label}</div>
-                            <div style={{ marginTop:4 }}>{p.kind==="leftovers" ? "Leftovers Night" : p.mealName}</div>
+                            <div className="subCardTitle">{p.label}</div>
+                            <div style={{ marginTop: 6 }}>
+                              {p.kind==="leftovers" ? "Leftovers Night" : p.mealName}
+                            </div>
                             {p.kind==="meal" ? (
-                              <div style={{ fontSize:12, opacity:0.75, marginTop:4 }}>
-                                Protein: <b>{p.proteinName}</b> • Uses: <b>{p.lbsUsed} lb</b>
-                              </div>
+                              <div className="kvs">Protein: <b>{p.proteinName}</b> • Uses: <b>{p.lbsUsed} lb</b></div>
                             ) : (
-                              <div style={{ fontSize:12, opacity:0.75, marginTop:4 }}>Use what’s in the fridge</div>
+                              <div className="kvs">Use what’s in the fridge</div>
                             )}
-                            {p.kind==="meal" ? (
-                              <div style={{ marginTop:8, display:"flex", gap:8, flexWrap:"wrap" }}>
-                                <button style={btn} onClick={()=>setOpenRecipeFor(p.mealId)}>View recipe</button>
-                              </div>
-                            ) : null}
                           </div>
-                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                            <button style={btnPrimary} onClick={()=>markDone(p)}>Done ✅</button>
+
+                          <div style={{ display:"flex", flexDirection:"column", gap: 8, minWidth: 130 }}>
+                            <button className="btnGood" onClick={()=>markDone(p)}>Done ✅</button>
+                            {p.kind==="meal" ? (
+                              <>
+                                <button className="btn" onClick={()=>setOpenRecipeFor(p.mealId)}>View recipe</button>
+                                <button className="btn" onClick={()=>swapMealForDate(p.date)}>Swap ↻</button>
+                              </>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -675,26 +1090,28 @@
                 )}
               </section>
 
-              <section style={card}>
-                <div style={{ display:"flex", justifyContent:"space-between", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+              <section className="card">
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap: 12, flexWrap:"wrap" }}>
                   <div>
-                    <h2 style={h2}>Trader Joe’s list (with quantities)</h2>
-                    <div style={{ marginTop:6, opacity:0.8 }}>Summed across planned meals + weekly staples, minus pantry staples.</div>
+                    <h2>Trader Joe’s list (with quantities)</h2>
+                    <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                      Summed across planned meals + weekly staples, <b>minus pantry</b> (fuzzy match supported).
+                    </div>
                   </div>
-                  <button style={btn} onClick={exportList}>Copy list</button>
+                  <button className="btn" onClick={exportList}>Copy list</button>
                 </div>
 
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:10 }}>
-                  <div>
+                <div className="split" style={{ marginTop: 12 }}>
+                  <div className="subCard">
                     {AISLES.map(a=>{
                       const items = groceryItems[a] || [];
                       if (!items.length) return null;
                       return (
-                        <div key={a} style={{ marginBottom:10 }}>
-                          <div style={{ fontWeight:800, marginBottom:4 }}>{a}</div>
-                          <ul style={{ margin:0, paddingLeft:18 }}>
+                        <div key={a} style={{ marginBottom: 12 }}>
+                          <div style={{ fontWeight: 900, marginBottom: 6 }}>{a}</div>
+                          <ul>
                             {items.map((it,idx)=>(
-                              <li key={idx} style={{ padding:"2px 0" }}>{formatLine(it)}</li>
+                              <li key={idx}>{formatLine(it)}</li>
                             ))}
                           </ul>
                         </div>
@@ -702,31 +1119,34 @@
                     })}
                   </div>
 
-                  <div>
-                    <h3 style={h3}>Weekly staples (always buy)</h3>
-                    <div style={{ display:"flex", gap:8, marginTop:6 }}>
-                      <input value={customWeekly} onChange={e=>setCustomWeekly(e.target.value)} placeholder="Add a weekly staple…" style={{ ...inputWide, flex:1 }} />
-                      <button style={btn} onClick={addWeeklyItem}>Add</button>
+                  <div className="subCard">
+                    <div className="subCardTitle">Weekly staples (always buy)</div>
+                    <div className="row">
+                      <input className="inputWide" value={customWeekly} onChange={e=>setCustomWeekly(e.target.value)} placeholder="Add a weekly staple…" />
+                      <button className="btn" onClick={addWeeklyItem}>Add</button>
                     </div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:10 }}>
+                    <div className="pillRow">
                       {(weeklyStaples||[]).map(it=>(
-                        <span key={it} style={pill}>
+                        <span key={it} className="pill">
                           {it}
-                          <button onClick={()=>removeWeeklyItem(it)} style={pillX} aria-label={`remove ${it}`}>×</button>
+                          <button onClick={()=>removeWeeklyItem(it)} aria-label={`remove ${it}`}>×</button>
                         </span>
                       ))}
                     </div>
 
-                    <h3 style={{ ...h3, marginTop:14 }}>Pantry staples (excluded)</h3>
-                    <div style={{ display:"flex", gap:8, marginTop:6 }}>
-                      <input value={customPantry} onChange={e=>setCustomPantry(e.target.value)} placeholder="Add a pantry staple…" style={{ ...inputWide, flex:1 }} />
-                      <button style={btn} onClick={addPantryItem}>Add</button>
+                    <div className="subCardTitle" style={{ marginTop: 14 }}>Pantry staples (excluded)</div>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                      Tip: add broad categories like <b>“yogurt”</b>, <b>“milk”</b>, <b>“cheese”</b>.
                     </div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:10 }}>
+                    <div className="row">
+                      <input className="inputWide" value={customPantry} onChange={e=>setCustomPantry(e.target.value)} placeholder="Add a pantry staple…" />
+                      <button className="btn" onClick={addPantryItem}>Add</button>
+                    </div>
+                    <div className="pillRow">
                       {(pantry||[]).map(it=>(
-                        <span key={it} style={pill}>
+                        <span key={it} className="pill">
                           {it}
-                          <button onClick={()=>removePantryItem(it)} style={pillX} aria-label={`remove ${it}`}>×</button>
+                          <button onClick={()=>removePantryItem(it)} aria-label={`remove ${it}`}>×</button>
                         </span>
                       ))}
                     </div>
@@ -739,66 +1159,6 @@
           </div>
         );
       }
-
-      function RecipeModal({ meal, onClose }) {
-        return (
-          <div
-            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", padding:16, zIndex:50 }}
-            onClick={onClose}
-          >
-            <div
-              style={{ background:"white", borderRadius:16, maxWidth:760, width:"100%", maxHeight:"85vh", overflow:"auto", border:"1px solid #e5e7eb", boxShadow:"0 10px 30px rgba(0,0,0,0.15)" }}
-              onClick={(e)=>e.stopPropagation()}
-            >
-              <div style={{ padding:14, borderBottom:"1px solid #e5e7eb", display:"flex", justifyContent:"space-between", gap:10 }}>
-                <div>
-                  <div style={{ fontSize:18, fontWeight:800 }}>{meal.name}</div>
-                  <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>
-                    {meal.recipe?.timeMins ? `${meal.recipe.timeMins} min` : ""} {meal.tags?.length ? `• ${meal.tags.join(", ")}` : ""}
-                  </div>
-                </div>
-                <button style={btn} onClick={onClose}>Close</button>
-              </div>
-
-              <div style={{ padding:14, display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-                <div>
-                  <div style={{ fontWeight:800, marginBottom:6 }}>Ingredients</div>
-                  <ul style={{ margin:0, paddingLeft:18 }}>
-                    {(meal.recipe?.ingredients || []).map((i, idx)=>(
-                      <li key={idx} style={{ padding:"3px 0", opacity: i.optional ? 0.7 : 1 }}>
-                        {formatLine(i)} {i.optional ? "(optional)" : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <div style={{ fontWeight:800, marginBottom:6 }}>Steps</div>
-                  <ol style={{ margin:0, paddingLeft:18 }}>
-                    {(meal.recipe?.steps || []).map((s, idx)=>(
-                      <li key={idx} style={{ padding:"3px 0" }}>{s}</li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      const card = { border:"1px solid #e5e7eb", borderRadius:16, padding:14, boxShadow:"0 1px 2px rgba(0,0,0,0.04)" };
-      const h2 = { margin:0, fontSize:18 };
-      const h3 = { margin:"10px 0 0", fontSize:14, opacity:0.9 };
-
-      const btn = { border:"1px solid #d1d5db", background:"white", borderRadius:12, padding:"10px 12px", cursor:"pointer" };
-      const btnPrimary = { ...btn, border:"1px solid #111827", background:"#111827", color:"white" };
-      const btnDanger = { ...btn, border:"1px solid #991b1b", background:"#fee2e2", color:"#7f1d1d" };
-
-      const input = { border:"1px solid #d1d5db", borderRadius:12, padding:"10px 12px", width:110 };
-      const inputWide = { border:"1px solid #d1d5db", borderRadius:12, padding:"10px 12px" };
-      const mini = { border:"1px solid #d1d5db", background:"white", borderRadius:10, padding:"6px 10px", cursor:"pointer" };
-
-      const pill = { display:"inline-flex", alignItems:"center", gap:8, border:"1px solid #e5e7eb", padding:"6px 10px", borderRadius:999, background:"#f9fafb" };
-      const pillX = { border:"none", background:"transparent", cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.7 };
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     </script>
