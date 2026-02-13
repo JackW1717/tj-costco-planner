@@ -1,1262 +1,806 @@
-import React, { useEffect, useMemo, useState } from "react";
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Costco + Trader Joe’s Planner (V2.5)</title>
 
-// V2.5 — Costco + Trader Joe’s Dinner Planner
-// Adds:
-// - Recipes per meal (ingredients + steps)
-// - Quantity math for grocery list (sums across planned meals)
-// - Still local-first (localStorage) + Netlify-friendly static hosting
+    <!-- React (UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
-const PROTEINS = [
-  { id: "beef", name: "Beef" },
-  { id: "chicken", name: "Chicken" },
-  { id: "turkey", name: "Turkey" },
-  { id: "sausage", name: "Sausage" },
-  { id: "pork", name: "Pork" },
-];
+    <!-- Babel for JSX in-browser (no build step) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-const DEFAULT_PANTRY = [
-  "olive oil",
-  "salt",
-  "pepper",
-  "garlic",
-  "onion",
-  "lemon",
-  "rice",
-  "pasta",
-  "tortillas",
-  "eggs",
-  "yogurt",
-  "salad greens",
-  "frozen veggies",
-  "broccoli",
-  "bell peppers",
-  "tomatoes",
-  "spinach",
-  "parmesan",
-  "soy sauce",
-  "coconut milk",
-  "salsa",
-  "beans",
-];
+    <style>
+      body { margin: 0; background: #fafafa; }
+      button { font: inherit; }
+      input, textarea { font: inherit; }
+      a { color: inherit; }
+    </style>
+  </head>
 
-const DEFAULT_WEEKLY_STAPLES = [
-  "bananas",
-  "berries",
-  "avocados",
-  "salad greens",
-  "lemons",
-  "sparkling water",
-  "eggs",
-  "greek yogurt",
-];
+  <body>
+    <div id="root"></div>
 
-const AISLES = [
-  "Produce",
-  "Meat/Seafood",
-  "Dairy",
-  "Pantry",
-  "Frozen",
-  "Bakery",
-  "Snacks",
-  "Beverages",
-  "Other",
-];
+    <script type="text/babel">
+      const { useEffect, useMemo, useState } = React;
 
-function aisleForItem(item) {
-  const s = (item || "").toLowerCase();
-  const has = (...words) => words.some((w) => s.includes(w));
+      const PROTEINS = [
+        { id: "beef", name: "Beef" },
+        { id: "chicken", name: "Chicken" },
+        { id: "turkey", name: "Turkey" },
+        { id: "sausage", name: "Sausage" },
+        { id: "pork", name: "Pork" },
+      ];
 
-  if (has("beef", "chicken", "turkey", "pork", "sausage", "steak", "ground")) return "Meat/Seafood";
-  if (has("milk", "yogurt", "cheese", "parmesan", "feta", "butter", "cream")) return "Dairy";
-  if (has("frozen")) return "Frozen";
-  if (has("bread", "buns", "roll", "bagel", "tortilla")) return "Bakery";
-  if (has("water", "sparkling", "seltzer", "coffee", "tea")) return "Beverages";
-  if (has("chips", "snack", "nuts", "crackers")) return "Snacks";
-  if (
-    has(
-      "broccoli",
-      "spinach",
-      "lettuce",
-      "salad",
-      "tomato",
-      "cucumber",
-      "pepper",
-      "onion",
-      "garlic",
-      "lemon",
-      "lime",
-      "cabbage",
-      "carrot",
-      "avocado",
-      "berries",
-      "banana",
-      "ginger",
-      "scallion",
-      "cilantro"
-    )
-  )
-    return "Produce";
-  if (has("rice", "pasta", "beans", "salsa", "soy", "oil", "salt", "pepper", "spice", "tomatoes", "coconut", "vinegar")) return "Pantry";
-  return "Other";
-}
+      const DEFAULT_PANTRY = [
+        "olive oil","salt","pepper","garlic","onion","lemon",
+        "rice","pasta","tortillas",
+        "eggs","yogurt",
+        "soy sauce","salsa","beans","tomatoes",
+      ];
 
-// --- Quantity model ---
-// Ingredient: { name, qty, unit, note?, optional? }
-// Units are free-form strings; we only sum if units match (e.g., "tbsp" with "tbsp").
-function ing(name, qty, unit, note, optional = false) {
-  return { name, qty, unit, note, optional };
-}
+      const DEFAULT_WEEKLY_STAPLES = [
+        "bananas","berries","avocados","salad greens","lemons","sparkling water","eggs","greek yogurt",
+      ];
 
-function normalizeName(name) {
-  return (name || "").toLowerCase().trim();
-}
+      const AISLES = [
+        "Produce","Meat/Seafood","Dairy","Pantry","Frozen","Bakery","Snacks","Beverages","Other",
+      ];
 
-function roundNice(n) {
-  // Nice display rounding
-  const r = Math.round(n * 4) / 4;
-  // trim .0
-  return r % 1 === 0 ? String(r.toFixed(0)) : String(r);
-}
-
-function sumIngredient(map, item, multiplier = 1) {
-  const name = normalizeName(item.name);
-  if (!name) return;
-  const key = `${name}__${item.unit || ""}`;
-  const prev = map.get(key);
-  const addQty = (Number(item.qty) || 0) * multiplier;
-  map.set(key, {
-    name: item.name,
-    unit: item.unit || "",
-    qty: (prev?.qty || 0) + addQty,
-    optional: !!item.optional,
-  });
-}
-
-function formatLine(item) {
-  const qty = item.qty ? `${roundNice(item.qty)} ` : "";
-  const unit = item.unit ? `${item.unit} ` : "";
-  return `${qty}${unit}${item.name}`.trim();
-}
-
-// inventory is pounds of raw protein
-function roundToQuarter(x) {
-  return Math.round(x * 4) / 4;
-}
-function lbsUsedPerDinner(maleOz, femaleOz) {
-  const totalOz = (Number(maleOz) || 0) + (Number(femaleOz) || 0);
-  return roundToQuarter(totalOz / 16);
-}
-
-// Meal schema
-// - recipe: { ingredients: Ingredient[], steps: string[], timeMins?: number }
-const DEFAULT_MEALS = [
-  {
-    id: "taco_bowls",
-    name: "Taco Bowls (veg-forward)",
-    protein: ["beef", "chicken", "pork", "turkey"],
-    tags: ["mexican", "weeknight"],
-    healthy: true,
-    processed: false,
-    refinedCarb: false,
-    vegScore: 3,
-    recipe: {
-      timeMins: 25,
-      ingredients: [
-        ing("salsa", 0.5, "cup"),
-        ing("cabbage", 0.5, "head", "or bagged slaw"),
-        ing("avocados", 1, "each"),
-        ing("lime", 1, "each"),
-        ing("onion", 1, "each"),
-        ing("cilantro", 0.5, "bunch", "optional", true),
-      ],
-      steps: [
-        "Brown your Costco protein with salt/pepper (add taco seasoning if you keep it).",
-        "Shred cabbage; slice onion; chop cilantro (optional).",
-        "Assemble bowls: protein + cabbage + salsa + avocado + squeeze of lime.",
-      ],
-    },
-  },
-  {
-    id: "stir_fry",
-    name: "Stir-fry (protein + veggies)",
-    protein: ["beef", "chicken", "pork", "turkey"],
-    tags: ["asian", "weeknight"],
-    healthy: true,
-    processed: false,
-    refinedCarb: false,
-    vegScore: 3,
-    recipe: {
-      timeMins: 20,
-      ingredients: [
-        ing("broccoli", 1, "head"),
-        ing("bell peppers", 2, "each"),
-        ing("soy sauce", 3, "tbsp"),
-        ing("ginger", 1, "inch"),
-        ing("scallions", 4, "stalks", "optional", true),
-        ing("rice", 1, "cup", "optional (if you want a carb)", true),
-      ],
-      steps: [
-        "Slice veggies; grate ginger.",
-        "Cook protein in a hot pan; remove.",
-        "Stir-fry veggies 4–6 min; add soy + ginger; return protein; toss.",
-      ],
-    },
-  },
-  {
-    id: "sheet_pan",
-    name: "Sheet Pan Protein + Veggies",
-    protein: ["chicken", "pork", "sausage"],
-    tags: ["one-pan", "easy"],
-    healthy: true,
-    processed: false,
-    refinedCarb: false,
-    vegScore: 3,
-    recipe: {
-      timeMins: 35,
-      ingredients: [
-        ing("broccoli", 2, "heads"),
-        ing("onion", 1, "each"),
-        ing("lemon", 1, "each"),
-        ing("olive oil", 2, "tbsp"),
-      ],
-      steps: [
-        "Heat oven to 425°F.",
-        "Toss chopped broccoli + onion with olive oil, salt, pepper.",
-        "Add protein to sheet pan; roast ~20–28 min (until done).",
-        "Finish with lemon squeeze.",
-      ],
-    },
-  },
-  {
-    id: "big_salad",
-    name: "Big Salad + Chicken",
-    protein: ["chicken"],
-    tags: ["salad", "light"],
-    healthy: true,
-    processed: false,
-    refinedCarb: false,
-    vegScore: 3,
-    recipe: {
-      timeMins: 15,
-      ingredients: [
-        ing("salad greens", 1, "bag"),
-        ing("tomatoes", 2, "each"),
-        ing("cucumber", 1, "each"),
-        ing("lemon", 1, "each"),
-        ing("olive oil", 2, "tbsp"),
-        ing("feta", 3, "oz", "optional", true),
-      ],
-      steps: [
-        "Chop tomatoes + cucumber.",
-        "Toss greens with olive oil + lemon + salt/pepper.",
-        "Top with cooked chicken; add feta if you want.",
-      ],
-    },
-  },
-  {
-    id: "chili",
-    name: "Turkey/Beef Chili (beans + veg)",
-    protein: ["beef", "turkey"],
-    tags: ["make-ahead", "comfort"],
-    healthy: true,
-    processed: false,
-    refinedCarb: false,
-    vegScore: 2,
-    recipe: {
-      timeMins: 45,
-      ingredients: [
-        ing("beans", 2, "cans"),
-        ing("tomatoes", 1, "can", "crushed or diced"),
-        ing("onion", 1, "each"),
-        ing("garlic", 3, "cloves"),
-        ing("chili powder", 2, "tbsp"),
-        ing("plain greek yogurt", 0.5, "cup", "optional topping", true),
-      ],
-      steps: [
-        "Brown protein with chopped onion.",
-        "Add garlic + chili powder; stir 30 sec.",
-        "Add beans + tomatoes + 1 cup water; simmer 20–30 min.",
-      ],
-    },
-  },
-  {
-    id: "saus_peppers",
-    name: "Sausage + Peppers",
-    protein: ["sausage"],
-    tags: ["italian", "quick"],
-    healthy: false,
-    processed: true,
-    refinedCarb: false,
-    vegScore: 2,
-    recipe: {
-      timeMins: 25,
-      ingredients: [
-        ing("bell peppers", 3, "each"),
-        ing("onion", 1, "each"),
-        ing("olive oil", 1, "tbsp"),
-        ing("mustard", 2, "tbsp", "optional", true),
-      ],
-      steps: [
-        "Slice peppers + onion.",
-        "Brown sausage; remove.",
-        "Cook peppers/onion 8–10 min; return sausage; combine.",
-      ],
-    },
-  },
-  {
-    id: "pasta",
-    name: "Pasta (meat sauce)",
-    protein: ["beef", "turkey", "sausage"],
-    tags: ["italian", "comfort"],
-    healthy: false,
-    processed: false,
-    refinedCarb: true,
-    vegScore: 1,
-    recipe: {
-      timeMins: 35,
-      ingredients: [
-        ing("pasta", 12, "oz"),
-        ing("tomatoes", 1, "can", "crushed"),
-        ing("onion", 1, "each"),
-        ing("garlic", 3, "cloves"),
-        ing("parmesan", 3, "oz"),
-      ],
-      steps: [
-        "Boil pasta.",
-        "Brown protein with onion; add garlic; add tomatoes; simmer 10–15.",
-        "Toss pasta with sauce; top parmesan.",
-      ],
-    },
-  },
-];
-
-// --- storage helpers ---
-const STORAGE_KEY = "tj-costco-planner-v25";
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
-  }
-}
-
-function startOfWeek(d = new Date()) {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = (day === 0 ? -6 : 1) - day; // week starts Monday
-  date.setDate(date.getDate() + diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-function fmtDate(d) {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
-}
-
-function unique(arr) {
-  return Array.from(new Set(arr.filter(Boolean)));
-}
-
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function daysAgoISO(days) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString();
-}
-
-function dayLabels(n) {
-  const base = startOfWeek();
-  return Array.from({ length: n }).map((_, i) => {
-    const d = new Date(base);
-    d.setDate(d.getDate() + i);
-    const dow = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(d);
-    return { label: `${dow} ${fmtDate(d)}`, date: d.toISOString() };
-  });
-}
-
-function toClipboard(text) {
-  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand("copy");
-  document.body.removeChild(ta);
-  return Promise.resolve();
-}
-
-function scoreMeal(meal, ctx) {
-  const { history, proteinInventory, lastProteins, tagHistory, healthyMode, noRepeatDays, refinedCarbCap, processedCap, processedSoFar, refinedSoFar } = ctx;
-
-  const recent = history
-    .filter((h) => new Date(h.date).getTime() >= new Date(daysAgoISO(noRepeatDays)).getTime())
-    .map((h) => h.mealId);
-
-  const usedRecently = recent.includes(meal.id);
-
-  const availableProteins = meal.protein.filter((p) => (proteinInventory[p] || 0) > 0);
-  const proteinOk = availableProteins.length > 0;
-
-  const proteinPenalty = meal.protein.some((p) => lastProteins.includes(p)) ? -1 : 0;
-  const tagOverlap = (meal.tags || []).reduce((acc, t) => acc + (tagHistory[t] || 0), 0);
-  const tagPenalty = -clamp(tagOverlap / 3, 0, 2);
-
-  const healthyBonus = healthyMode ? (meal.healthy ? 1.5 : -2) + (meal.processed ? -2.5 : 0) + (meal.vegScore || 0) * 0.35 : 0;
-
-  const capPenalty =
-    (healthyMode && meal.processed && processedSoFar >= processedCap ? -100 : 0) +
-    (healthyMode && meal.refinedCarb && refinedSoFar >= refinedCarbCap ? -100 : 0);
-
-  let score = 0;
-  score += proteinOk ? 3 : -10;
-  score += usedRecently ? -3 : 2;
-  score += proteinPenalty;
-  score += tagPenalty;
-  score += healthyBonus;
-  score += capPenalty;
-  score += (meal.recipe?.ingredients?.length || 0) <= 7 ? 0.5 : 0; // slight preference for simpler
-
-  return { score, availableProteins };
-}
-
-function pickProtein(meal, proteinInventory, lastProteins, lbsPerDinner) {
-  const available = meal.protein
-    .filter((p) => (proteinInventory[p] || 0) >= lbsPerDinner)
-    .sort((a, b) => {
-      const aRecent = lastProteins.includes(a) ? 1 : 0;
-      const bRecent = lastProteins.includes(b) ? 1 : 0;
-      if (aRecent !== bRecent) return aRecent - bRecent;
-      return (proteinInventory[b] || 0) - (proteinInventory[a] || 0);
-    });
-  return available[0] || null;
-}
-
-export default function App() {
-  const saved = useMemo(() => loadState(), []);
-
-  const [proteinInventory, setProteinInventory] = useState(
-    saved?.proteinInventory ?? {
-      beef: 6,
-      chicken: 8,
-      turkey: 6,
-      sausage: 3,
-      pork: 4,
-    }
-  );
-
-  const [pantry, setPantry] = useState(saved?.pantry ?? DEFAULT_PANTRY);
-  const [weeklyStaples, setWeeklyStaples] = useState(saved?.weeklyStaples ?? DEFAULT_WEEKLY_STAPLES);
-
-  const [weekNights, setWeekNights] = useState(saved?.weekNights ?? 5);
-  const [leftoversNights, setLeftoversNights] = useState(saved?.leftoversNights ?? 1);
-  const [avoid, setAvoid] = useState(saved?.avoid ?? []);
-
-  const [maleOz, setMaleOz] = useState(saved?.maleOz ?? 10);
-  const [femaleOz, setFemaleOz] = useState(saved?.femaleOz ?? 6);
-
-  const [noRepeatDays, setNoRepeatDays] = useState(saved?.noRepeatDays ?? 21);
-
-  const [healthyMode, setHealthyMode] = useState(saved?.healthyMode ?? true);
-  const [maxProcessedMeals, setMaxProcessedMeals] = useState(saved?.maxProcessedMeals ?? 1);
-  const [maxRefinedCarbMeals, setMaxRefinedCarbMeals] = useState(saved?.maxRefinedCarbMeals ?? 1);
-
-  const [meals, setMeals] = useState(saved?.meals ?? DEFAULT_MEALS);
-
-  const [plan, setPlan] = useState(saved?.plan ?? []); // [{date,label,kind:'meal'|'leftovers',mealId,proteinId,lbsUsed}]
-  const [history, setHistory] = useState(saved?.history ?? []);
-
-  const [customPantry, setCustomPantry] = useState("");
-  const [customWeekly, setCustomWeekly] = useState("");
-
-  const [openRecipeFor, setOpenRecipeFor] = useState(null);
-
-  useEffect(() => {
-    saveState({
-      proteinInventory,
-      pantry,
-      weeklyStaples,
-      weekNights,
-      leftoversNights,
-      avoid,
-      maleOz,
-      femaleOz,
-      noRepeatDays,
-      healthyMode,
-      maxProcessedMeals,
-      maxRefinedCarbMeals,
-      meals,
-      plan,
-      history,
-    });
-  }, [
-    proteinInventory,
-    pantry,
-    weeklyStaples,
-    weekNights,
-    leftoversNights,
-    avoid,
-    maleOz,
-    femaleOz,
-    noRepeatDays,
-    healthyMode,
-    maxProcessedMeals,
-    maxRefinedCarbMeals,
-    meals,
-    plan,
-    history,
-  ]);
-
-  const lbsPerDinner = lbsUsedPerDinner(maleOz, femaleOz);
-
-  const lastProteins = useMemo(() => (history || []).slice(-2).map((h) => h.proteinId).filter(Boolean), [history]);
-
-  const tagHistory = useMemo(() => {
-    const last = (history || []).slice(-10);
-    const counts = {};
-    for (const h of last) {
-      const meal = meals.find((m) => m.id === h.mealId);
-      if (!meal) continue;
-      for (const t of meal.tags || []) counts[t] = (counts[t] || 0) + 1;
-    }
-    return counts;
-  }, [history, meals]);
-
-  const planCards = useMemo(() => {
-    return plan.map((p) => {
-      const meal = meals.find((m) => m.id === p.mealId);
-      const proteinName = PROTEINS.find((x) => x.id === p.proteinId)?.name;
-      return {
-        ...p,
-        meal,
-        mealName: meal?.name ?? "Leftovers",
-        tags: meal?.tags ?? [],
-        proteinName: proteinName ?? (p.kind === "leftovers" ? "—" : "(Pick protein)"),
-      };
-    });
-  }, [plan, meals]);
-
-  // ---- Grocery list with quantities (sums across planned meals) ----
-  const groceryItems = useMemo(() => {
-    const totals = new Map();
-
-    // planned meals
-    for (const p of plan) {
-      if (p.kind !== "meal") continue;
-      const meal = meals.find((m) => m.id === p.mealId);
-      if (!meal?.recipe?.ingredients?.length) continue;
-
-      // multiplier lets you scale recipes later; for now 1 per planned dinner
-      const multiplier = 1;
-
-      for (const ingredient of meal.recipe.ingredients) {
-        sumIngredient(totals, ingredient, multiplier);
+      function aisleForItem(item) {
+        const s = (item || "").toLowerCase();
+        const has = (...words) => words.some((w) => s.includes(w));
+        if (has("beef","chicken","turkey","pork","sausage","steak","ground")) return "Meat/Seafood";
+        if (has("milk","yogurt","cheese","parmesan","feta","butter","cream")) return "Dairy";
+        if (has("frozen")) return "Frozen";
+        if (has("bread","buns","roll","bagel","tortilla")) return "Bakery";
+        if (has("water","sparkling","seltzer","coffee","tea")) return "Beverages";
+        if (has("chips","snack","nuts","crackers")) return "Snacks";
+        if (has("broccoli","spinach","lettuce","salad","tomato","cucumber","pepper","onion","garlic","lemon","lime","cabbage","carrot","avocado","berries","banana","ginger","scallion","cilantro")) return "Produce";
+        if (has("rice","pasta","beans","salsa","soy","oil","salt","pepper","spice","tomatoes","coconut","vinegar","can")) return "Pantry";
+        return "Other";
       }
 
-      // protein is handled separately by Costco inventory; but if you WANT to show it in list, uncomment:
-      // totals.set(`protein_${p.proteinId}__lb`, { name: `${p.proteinId} (Costco protein)`, unit: "lb", qty: (totals.get(`protein_${p.proteinId}__lb`)?.qty||0) + (p.lbsUsed||0) });
-    }
-
-    // weekly staples (no qty info => assume 1 each)
-    for (const s of weeklyStaples || []) {
-      sumIngredient(totals, ing(s, 1, "each"), 1);
-    }
-
-    // remove pantry staples
-    const pantryLower = new Set((pantry || []).map((x) => normalizeName(x)));
-    const out = [];
-    for (const v of totals.values()) {
-      if (pantryLower.has(normalizeName(v.name))) continue;
-      out.push(v);
-    }
-
-    // group by aisle
-    const byAisle = {};
-    for (const a of AISLES) byAisle[a] = [];
-    for (const it of out) {
-      const a = aisleForItem(it.name);
-      byAisle[a].push(it);
-    }
-    for (const a of AISLES) {
-      byAisle[a] = byAisle[a].sort((x, y) => normalizeName(x.name).localeCompare(normalizeName(y.name)));
-    }
-
-    return byAisle;
-  }, [plan, meals, weeklyStaples, pantry]);
-
-  const groceryText = useMemo(() => {
-    const lines = [];
-    for (const aisle of AISLES) {
-      const items = groceryItems[aisle] || [];
-      if (!items.length) continue;
-      lines.push(`${aisle}:`);
-      for (const it of items) lines.push(`- ${formatLine(it)}`);
-      lines.push("");
-    }
-    return lines.join("
-").trim();
-  }, [groceryItems]);
-
-  function generatePlan() {
-    const nights = clamp(Number(weekNights) || 5, 1, 7);
-    const leftovers = clamp(Number(leftoversNights) || 0, 0, nights);
-
-    const simInventory = { ...proteinInventory };
-    const labels = dayLabels(nights);
-    const newPlan = [];
-
-    let simLastProteins = [...lastProteins];
-    let simTagHistory = { ...tagHistory };
-    let processedSoFar = 0;
-    let refinedSoFar = 0;
-
-    const leftoversSlots = new Set();
-    if (leftovers > 0) {
-      const picks = [Math.floor(nights / 2)];
-      if (leftovers > 1) picks.push(nights - 1);
-      while (picks.length < leftovers) picks.push(Math.floor(Math.random() * nights));
-      for (const idx of picks.slice(0, leftovers)) leftoversSlots.add(idx);
-    }
-
-    for (let i = 0; i < nights; i++) {
-      if (leftoversSlots.has(i)) {
-        newPlan.push({ ...labels[i], kind: "leftovers", mealId: null, proteinId: null, lbsUsed: 0 });
-        continue;
+      // Ingredient helper
+      function ing(name, qty, unit, note, optional = false) {
+        return { name, qty, unit, note, optional };
       }
 
-      const candidates = meals.filter((m) => !avoid.includes(m.id));
-      const scored = candidates
-        .map((m) => {
-          const s = scoreMeal(m, {
-            history,
-            proteinInventory: simInventory,
-            lastProteins: simLastProteins,
-            tagHistory: simTagHistory,
-            healthyMode,
-            noRepeatDays,
-            refinedCarbCap: Number(maxRefinedCarbMeals || 0),
-            processedCap: Number(maxProcessedMeals || 0),
-            processedSoFar,
-            refinedSoFar,
+      function normalizeName(name) {
+        return (name || "").toLowerCase().trim();
+      }
+
+      function roundNice(n) {
+        const r = Math.round(n * 4) / 4;
+        return r % 1 === 0 ? String(r.toFixed(0)) : String(r);
+      }
+
+      function sumIngredient(map, item, multiplier = 1) {
+        const name = normalizeName(item.name);
+        if (!name) return;
+        const key = `${name}__${item.unit || ""}`;
+        const prev = map.get(key);
+        const addQty = (Number(item.qty) || 0) * multiplier;
+        map.set(key, {
+          name: item.name,
+          unit: item.unit || "",
+          qty: (prev?.qty || 0) + addQty,
+          optional: !!item.optional,
+        });
+      }
+
+      function formatLine(item) {
+        const qty = item.qty ? `${roundNice(item.qty)} ` : "";
+        const unit = item.unit ? `${item.unit} ` : "";
+        return `${qty}${unit}${item.name}`.trim();
+      }
+
+      function roundToQuarter(x) {
+        return Math.round(x * 4) / 4;
+      }
+      function lbsUsedPerDinner(maleOz, femaleOz) {
+        const totalOz = (Number(maleOz) || 0) + (Number(femaleOz) || 0);
+        return roundToQuarter(totalOz / 16);
+      }
+
+      const DEFAULT_MEALS = [
+        {
+          id: "taco_bowls",
+          name: "Taco Bowls (veg-forward)",
+          protein: ["beef","chicken","pork","turkey"],
+          tags: ["mexican","weeknight"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 3,
+          recipe: {
+            timeMins: 25,
+            ingredients: [
+              ing("salsa", 0.5, "cup"),
+              ing("cabbage", 0.5, "head", "or bagged slaw"),
+              ing("avocados", 1, "each"),
+              ing("lime", 1, "each"),
+              ing("onion", 1, "each"),
+              ing("cilantro", 0.5, "bunch", "optional", true),
+            ],
+            steps: [
+              "Brown your Costco protein with salt/pepper (add taco seasoning if you keep it).",
+              "Shred cabbage; slice onion; chop cilantro (optional).",
+              "Assemble bowls: protein + cabbage + salsa + avocado + squeeze of lime.",
+            ],
+          },
+        },
+        {
+          id: "stir_fry",
+          name: "Stir-fry (protein + veggies)",
+          protein: ["beef","chicken","pork","turkey"],
+          tags: ["asian","weeknight"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 3,
+          recipe: {
+            timeMins: 20,
+            ingredients: [
+              ing("broccoli", 1, "head"),
+              ing("bell peppers", 2, "each"),
+              ing("soy sauce", 3, "tbsp"),
+              ing("ginger", 1, "inch"),
+              ing("scallions", 4, "stalks", "optional", true),
+              ing("rice", 1, "cup", "optional (if you want a carb)", true),
+            ],
+            steps: [
+              "Slice veggies; grate ginger.",
+              "Cook protein in a hot pan; remove.",
+              "Stir-fry veggies 4–6 min; add soy + ginger; return protein; toss.",
+            ],
+          },
+        },
+        {
+          id: "sheet_pan",
+          name: "Sheet Pan Protein + Veggies",
+          protein: ["chicken","pork","sausage"],
+          tags: ["one-pan","easy"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 3,
+          recipe: {
+            timeMins: 35,
+            ingredients: [
+              ing("broccoli", 2, "heads"),
+              ing("onion", 1, "each"),
+              ing("lemon", 1, "each"),
+              ing("olive oil", 2, "tbsp"),
+            ],
+            steps: [
+              "Heat oven to 425°F.",
+              "Toss chopped broccoli + onion with olive oil, salt, pepper.",
+              "Add protein to sheet pan; roast ~20–28 min (until done).",
+              "Finish with lemon squeeze.",
+            ],
+          },
+        },
+        {
+          id: "big_salad",
+          name: "Big Salad + Chicken",
+          protein: ["chicken"],
+          tags: ["salad","light"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 3,
+          recipe: {
+            timeMins: 15,
+            ingredients: [
+              ing("salad greens", 1, "bag"),
+              ing("tomatoes", 2, "each"),
+              ing("cucumber", 1, "each"),
+              ing("lemon", 1, "each"),
+              ing("olive oil", 2, "tbsp"),
+              ing("feta", 3, "oz", "optional", true),
+            ],
+            steps: [
+              "Chop tomatoes + cucumber.",
+              "Toss greens with olive oil + lemon + salt/pepper.",
+              "Top with cooked chicken; add feta if you want.",
+            ],
+          },
+        },
+        {
+          id: "chili",
+          name: "Turkey/Beef Chili (beans + veg)",
+          protein: ["beef","turkey"],
+          tags: ["make-ahead","comfort"],
+          healthy: true, processed: false, refinedCarb: false, vegScore: 2,
+          recipe: {
+            timeMins: 45,
+            ingredients: [
+              ing("beans", 2, "cans"),
+              ing("tomatoes", 1, "can", "crushed or diced"),
+              ing("onion", 1, "each"),
+              ing("garlic", 3, "cloves"),
+              ing("chili powder", 2, "tbsp"),
+              ing("plain greek yogurt", 0.5, "cup", "optional topping", true),
+            ],
+            steps: [
+              "Brown protein with chopped onion.",
+              "Add garlic + chili powder; stir 30 sec.",
+              "Add beans + tomatoes + 1 cup water; simmer 20–30 min.",
+            ],
+          },
+        },
+        {
+          id: "saus_peppers",
+          name: "Sausage + Peppers",
+          protein: ["sausage"],
+          tags: ["italian","quick"],
+          healthy: false, processed: true, refinedCarb: false, vegScore: 2,
+          recipe: {
+            timeMins: 25,
+            ingredients: [
+              ing("bell peppers", 3, "each"),
+              ing("onion", 1, "each"),
+              ing("olive oil", 1, "tbsp"),
+              ing("mustard", 2, "tbsp", "optional", true),
+            ],
+            steps: [
+              "Slice peppers + onion.",
+              "Brown sausage; remove.",
+              "Cook peppers/onion 8–10 min; return sausage; combine.",
+            ],
+          },
+        },
+        {
+          id: "pasta",
+          name: "Pasta (meat sauce)",
+          protein: ["beef","turkey","sausage"],
+          tags: ["italian","comfort"],
+          healthy: false, processed: false, refinedCarb: true, vegScore: 1,
+          recipe: {
+            timeMins: 35,
+            ingredients: [
+              ing("pasta", 12, "oz"),
+              ing("tomatoes", 1, "can", "crushed"),
+              ing("onion", 1, "each"),
+              ing("garlic", 3, "cloves"),
+              ing("parmesan", 3, "oz"),
+            ],
+            steps: [
+              "Boil pasta.",
+              "Brown protein with onion; add garlic; add tomatoes; simmer 10–15.",
+              "Toss pasta with sauce; top parmesan.",
+            ],
+          },
+        },
+      ];
+
+      const STORAGE_KEY = "tj-costco-planner-static-v25";
+
+      function loadState() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }
+        catch { return null; }
+      }
+      function saveState(state) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+        catch {}
+      }
+
+      function startOfWeek(d = new Date()) {
+        const date = new Date(d);
+        const day = date.getDay();
+        const diff = (day === 0 ? -6 : 1) - day; // Monday start
+        date.setDate(date.getDate() + diff);
+        date.setHours(0,0,0,0);
+        return date;
+      }
+      function fmtDate(d) {
+        return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
+      }
+      function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+      function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
+      function daysAgoISO(days){ const d=new Date(); d.setDate(d.getDate()-days); return d.toISOString(); }
+
+      function dayLabels(n) {
+        const base = startOfWeek();
+        return Array.from({ length: n }).map((_, i) => {
+          const d = new Date(base);
+          d.setDate(d.getDate() + i);
+          const dow = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(d);
+          return { label: `${dow} ${fmtDate(d)}`, date: d.toISOString() };
+        });
+      }
+
+      function toClipboard(text) {
+        if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        return Promise.resolve();
+      }
+
+      function scoreMeal(meal, ctx) {
+        const { history, proteinInventory, lastProteins, healthyMode, noRepeatDays, processedCap, refinedCap, processedSoFar, refinedSoFar } = ctx;
+
+        const recent = (history||[])
+          .filter(h => new Date(h.date).getTime() >= new Date(daysAgoISO(noRepeatDays)).getTime())
+          .map(h => h.mealId);
+
+        const usedRecently = recent.includes(meal.id);
+        const availableProteins = (meal.protein||[]).filter(p => (proteinInventory[p]||0) > 0);
+        const proteinOk = availableProteins.length > 0;
+
+        const proteinPenalty = (meal.protein||[]).some(p => (lastProteins||[]).includes(p)) ? -1 : 0;
+
+        const healthyBonus = healthyMode ? (meal.healthy ? 1.2 : -2) + (meal.processed ? -2.5 : 0) + (meal.vegScore||0)*0.35 : 0;
+
+        const capPenalty =
+          (healthyMode && meal.processed && processedSoFar >= processedCap ? -100 : 0) +
+          (healthyMode && meal.refinedCarb && refinedSoFar >= refinedCap ? -100 : 0);
+
+        let score = 0;
+        score += proteinOk ? 3 : -10;
+        score += usedRecently ? -3 : 2;
+        score += proteinPenalty;
+        score += healthyBonus;
+        score += capPenalty;
+        score += (meal.recipe?.ingredients?.length || 0) <= 7 ? 0.5 : 0;
+
+        return score;
+      }
+
+      function pickProtein(meal, proteinInventory, lastProteins, lbsPerDinner) {
+        const available = (meal.protein||[])
+          .filter(p => (proteinInventory[p]||0) >= lbsPerDinner)
+          .sort((a,b)=>{
+            const ar = (lastProteins||[]).includes(a) ? 1 : 0;
+            const br = (lastProteins||[]).includes(b) ? 1 : 0;
+            if (ar !== br) return ar - br;
+            return (proteinInventory[b]||0) - (proteinInventory[a]||0);
           });
-          return { meal: m, ...s };
-        })
-        .sort((a, b) => b.score - a.score);
+        return available[0] || (meal.protein||[])[0] || null;
+      }
 
-      const chosenMeal = scored[0]?.meal || candidates[0];
-      const chosenProtein = pickProtein(chosenMeal, simInventory, simLastProteins, lbsPerDinner) || chosenMeal.protein[0];
+      function App() {
+        const saved = useMemo(() => loadState(), []);
 
-      simInventory[chosenProtein] = roundToQuarter(Math.max(0, (simInventory[chosenProtein] || 0) - lbsPerDinner));
+        const [proteinInventory, setProteinInventory] = useState(saved?.proteinInventory ?? { beef:6, chicken:8, turkey:6, sausage:3, pork:4 });
+        const [pantry, setPantry] = useState(saved?.pantry ?? DEFAULT_PANTRY);
+        const [weeklyStaples, setWeeklyStaples] = useState(saved?.weeklyStaples ?? DEFAULT_WEEKLY_STAPLES);
 
-      if (healthyMode && chosenMeal.processed) processedSoFar += 1;
-      if (healthyMode && chosenMeal.refinedCarb) refinedSoFar += 1;
+        const [weekNights, setWeekNights] = useState(saved?.weekNights ?? 5);
+        const [leftoversNights, setLeftoversNights] = useState(saved?.leftoversNights ?? 1);
+        const [avoid, setAvoid] = useState(saved?.avoid ?? []);
 
-      simLastProteins = unique([chosenProtein, ...simLastProteins]).slice(0, 2);
-      for (const t of chosenMeal.tags || []) simTagHistory[t] = (simTagHistory[t] || 0) + 1;
+        const [maleOz, setMaleOz] = useState(saved?.maleOz ?? 10);
+        const [femaleOz, setFemaleOz] = useState(saved?.femaleOz ?? 6);
 
-      newPlan.push({ ...labels[i], kind: "meal", mealId: chosenMeal.id, proteinId: chosenProtein, lbsUsed: lbsPerDinner });
-    }
+        const [noRepeatDays, setNoRepeatDays] = useState(saved?.noRepeatDays ?? 21);
+        const [healthyMode, setHealthyMode] = useState(saved?.healthyMode ?? true);
+        const [maxProcessedMeals, setMaxProcessedMeals] = useState(saved?.maxProcessedMeals ?? 1);
+        const [maxRefinedMeals, setMaxRefinedMeals] = useState(saved?.maxRefinedMeals ?? 1);
 
-    setPlan(newPlan);
-  }
+        const [meals, setMeals] = useState(saved?.meals ?? DEFAULT_MEALS);
+        const [plan, setPlan] = useState(saved?.plan ?? []);
+        const [history, setHistory] = useState(saved?.history ?? []);
 
-  function markDone(entry) {
-    if (entry.kind === "leftovers") {
-      setPlan((prev) => prev.filter((p) => p.date !== entry.date));
-      return;
-    }
+        const [customPantry, setCustomPantry] = useState("");
+        const [customWeekly, setCustomWeekly] = useState("");
+        const [openRecipeFor, setOpenRecipeFor] = useState(null);
 
-    if (entry.proteinId) {
-      setProteinInventory((prev) => ({
-        ...prev,
-        [entry.proteinId]: roundToQuarter(Math.max(0, (prev[entry.proteinId] || 0) - (entry.lbsUsed || 0))),
-      }));
-    }
+        useEffect(() => {
+          saveState({
+            proteinInventory, pantry, weeklyStaples,
+            weekNights, leftoversNights, avoid,
+            maleOz, femaleOz,
+            noRepeatDays, healthyMode, maxProcessedMeals, maxRefinedMeals,
+            meals, plan, history
+          });
+        }, [proteinInventory, pantry, weeklyStaples, weekNights, leftoversNights, avoid, maleOz, femaleOz, noRepeatDays, healthyMode, maxProcessedMeals, maxRefinedMeals, meals, plan, history]);
 
-    setHistory((prev) => [...prev, { date: new Date().toISOString(), mealId: entry.mealId, proteinId: entry.proteinId, lbsUsed: entry.lbsUsed }]);
-    setPlan((prev) => prev.filter((p) => p.date !== entry.date));
-  }
+        const lbsPerDinner = lbsUsedPerDinner(maleOz, femaleOz);
+        const lastProteins = useMemo(() => (history||[]).slice(-2).map(h => h.proteinId).filter(Boolean), [history]);
 
-  function resetWeek() {
-    setPlan([]);
-  }
+        const planCards = useMemo(() => plan.map(p => {
+          const meal = meals.find(m => m.id === p.mealId);
+          const proteinName = PROTEINS.find(x => x.id === p.proteinId)?.name;
+          return { ...p, meal, mealName: meal?.name ?? "Leftovers", tags: meal?.tags ?? [], proteinName: proteinName ?? (p.kind==="leftovers" ? "—" : "(Pick protein)") };
+        }), [plan, meals]);
 
-  function toggleAvoid(mealId) {
-    setAvoid((prev) => (prev.includes(mealId) ? prev.filter((x) => x !== mealId) : [...prev, mealId]));
-  }
+        const groceryItems = useMemo(() => {
+          const totals = new Map();
 
-  function addPantryItem() {
-    const v = customPantry.trim();
-    if (!v) return;
-    setPantry((prev) => unique([...(prev || []), v]).sort((a, b) => a.localeCompare(b)));
-    setCustomPantry("");
-  }
+          for (const p of plan) {
+            if (p.kind !== "meal") continue;
+            const meal = meals.find(m => m.id === p.mealId);
+            if (!meal?.recipe?.ingredients?.length) continue;
+            for (const ingredient of meal.recipe.ingredients) sumIngredient(totals, ingredient, 1);
+          }
 
-  function addWeeklyItem() {
-    const v = customWeekly.trim();
-    if (!v) return;
-    setWeeklyStaples((prev) => unique([...(prev || []), v]).sort((a, b) => a.localeCompare(b)));
-    setCustomWeekly("");
-  }
+          for (const s of weeklyStaples || []) sumIngredient(totals, ing(s, 1, "each"), 1);
 
-  function removePantryItem(item) {
-    setPantry((prev) => (prev || []).filter((x) => x !== item));
-  }
+          const pantryLower = new Set((pantry||[]).map(x => normalizeName(x)));
+          const out = [];
+          for (const v of totals.values()) {
+            if (pantryLower.has(normalizeName(v.name))) continue;
+            out.push(v);
+          }
 
-  function removeWeeklyItem(item) {
-    setWeeklyStaples((prev) => (prev || []).filter((x) => x !== item));
-  }
+          const byAisle = {};
+          for (const a of AISLES) byAisle[a] = [];
+          for (const it of out) byAisle[aisleForItem(it.name)].push(it);
+          for (const a of AISLES) byAisle[a] = byAisle[a].sort((x,y)=>normalizeName(x.name).localeCompare(normalizeName(y.name)));
+          return byAisle;
+        }, [plan, meals, weeklyStaples, pantry]);
 
-  function exportList() {
-    toClipboard(groceryText);
-  }
+        const groceryText = useMemo(() => {
+          const lines = [];
+          for (const aisle of AISLES) {
+            const items = groceryItems[aisle] || [];
+            if (!items.length) continue;
+            lines.push(`${aisle}:`);
+            for (const it of items) lines.push(`- ${formatLine(it)}`);
+            lines.push("");
+          }
+          return lines.join("\n").trim();
+        }, [groceryItems]);
 
-  function updateMeal(id, patch) {
-    setMeals((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-  }
+        function generatePlan() {
+          const nights = clamp(Number(weekNights) || 5, 1, 7);
+          const leftovers = clamp(Number(leftoversNights) || 0, 0, nights);
 
-  function addMeal() {
-    const id = `meal_${Math.random().toString(16).slice(2)}`;
-    const m = {
-      id,
-      name: "New Meal",
-      protein: ["chicken"],
-      tags: ["weeknight"],
-      healthy: true,
-      processed: false,
-      refinedCarb: false,
-      vegScore: 2,
-      recipe: {
-        timeMins: 20,
-        ingredients: [ing("salad greens", 1, "bag")],
-        steps: ["Describe the steps here."],
-      },
-    };
-    setMeals((prev) => [m, ...prev]);
-  }
+          const simInventory = { ...proteinInventory };
+          const labels = dayLabels(nights);
+          const newPlan = [];
 
-  function deleteMeal(id) {
-    setMeals((prev) => prev.filter((m) => m.id !== id));
-    setAvoid((prev) => prev.filter((x) => x !== id));
-    setPlan((prev) => prev.filter((p) => p.mealId !== id));
-    setHistory((prev) => prev.filter((h) => h.mealId !== id));
-    if (openRecipeFor === id) setOpenRecipeFor(null);
-  }
+          let simLast = [...lastProteins];
+          let processedSoFar = 0;
+          let refinedSoFar = 0;
 
-  const recipe = useMemo(() => meals.find((m) => m.id === openRecipeFor) || null, [meals, openRecipeFor]);
+          const leftoversSlots = new Set();
+          if (leftovers > 0) {
+            const picks = [Math.floor(nights / 2)];
+            if (leftovers > 1) picks.push(nights - 1);
+            while (picks.length < leftovers) picks.push(Math.floor(Math.random() * nights));
+            for (const idx of picks.slice(0, leftovers)) leftoversSlots.add(idx);
+          }
 
-  return (
-    <div style={{ fontFamily: "ui-sans-serif, system-ui", padding: 16, maxWidth: 1200, margin: "0 auto" }}>
-      <header style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28 }}>Costco + Trader Joe’s Planner</h1>
-          <p style={{ marginTop: 6, opacity: 0.8 }}>Now includes recipes + summed quantities for your TJ list.</p>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={generatePlan} style={btnPrimary}>
-            Generate this week
-          </button>
-          <button onClick={resetWeek} style={btn}>
-            Clear plan
-          </button>
-        </div>
-      </header>
+          for (let i = 0; i < nights; i++) {
+            if (leftoversSlots.has(i)) {
+              newPlan.push({ ...labels[i], kind: "leftovers", mealId: null, proteinId: null, lbsUsed: 0 });
+              continue;
+            }
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginTop: 12 }}>
-        <section style={card}>
-          <h2 style={h2}>Setup</h2>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
-            <label>
-              Weeknights:&nbsp;
-              <input type="number" min={1} max={7} value={weekNights} onChange={(e) => setWeekNights(e.target.value)} style={input} />
-            </label>
-            <label>
-              Leftovers:&nbsp;
-              <input type="number" min={0} max={7} value={leftoversNights} onChange={(e) => setLeftoversNights(e.target.value)} style={input} />
-            </label>
-            <label>
-              No-repeat days:&nbsp;
-              <input type="number" min={7} max={42} value={noRepeatDays} onChange={(e) => setNoRepeatDays(e.target.value)} style={input} />
-            </label>
-          </div>
+            const candidates = meals.filter(m => !avoid.includes(m.id));
+            const scored = candidates
+              .map(m => ({ m, s: scoreMeal(m, {
+                history, proteinInventory: simInventory, lastProteins: simLast,
+                healthyMode, noRepeatDays,
+                processedCap: Number(maxProcessedMeals||0),
+                refinedCap: Number(maxRefinedMeals||0),
+                processedSoFar, refinedSoFar
+              })}))
+              .sort((a,b)=>b.s-a.s);
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-            <div>
-              <h3 style={h3}>2-person portion math (raw protein)</h3>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  Male oz:
-                  <input type="number" min={4} max={16} value={maleOz} onChange={(e) => setMaleOz(e.target.value)} style={input} />
-                </label>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  Female oz:
-                  <input type="number" min={3} max={14} value={femaleOz} onChange={(e) => setFemaleOz(e.target.value)} style={input} />
-                </label>
+            const chosenMeal = scored[0]?.m || candidates[0];
+            const chosenProtein = pickProtein(chosenMeal, simInventory, simLast, lbsPerDinner);
+
+            simInventory[chosenProtein] = roundToQuarter(Math.max(0, (simInventory[chosenProtein]||0) - lbsPerDinner));
+            if (healthyMode && chosenMeal.processed) processedSoFar++;
+            if (healthyMode && chosenMeal.refinedCarb) refinedSoFar++;
+
+            simLast = unique([chosenProtein, ...simLast]).slice(0,2);
+            newPlan.push({ ...labels[i], kind: "meal", mealId: chosenMeal.id, proteinId: chosenProtein, lbsUsed: lbsPerDinner });
+          }
+
+          setPlan(newPlan);
+        }
+
+        function markDone(entry) {
+          if (entry.kind === "leftovers") {
+            setPlan(prev => prev.filter(p => p.date !== entry.date));
+            return;
+          }
+          if (entry.proteinId) {
+            setProteinInventory(prev => ({
+              ...prev,
+              [entry.proteinId]: roundToQuarter(Math.max(0, (prev[entry.proteinId]||0) - (entry.lbsUsed||0)))
+            }));
+          }
+          setHistory(prev => [...prev, { date: new Date().toISOString(), mealId: entry.mealId, proteinId: entry.proteinId, lbsUsed: entry.lbsUsed }]);
+          setPlan(prev => prev.filter(p => p.date !== entry.date));
+        }
+
+        function toggleAvoid(mealId) {
+          setAvoid(prev => prev.includes(mealId) ? prev.filter(x => x !== mealId) : [...prev, mealId]);
+        }
+
+        function addPantryItem() {
+          const v = customPantry.trim();
+          if (!v) return;
+          setPantry(prev => unique([...(prev||[]), v]).sort((a,b)=>a.localeCompare(b)));
+          setCustomPantry("");
+        }
+        function removePantryItem(item) {
+          setPantry(prev => (prev||[]).filter(x => x !== item));
+        }
+
+        function addWeeklyItem() {
+          const v = customWeekly.trim();
+          if (!v) return;
+          setWeeklyStaples(prev => unique([...(prev||[]), v]).sort((a,b)=>a.localeCompare(b)));
+          setCustomWeekly("");
+        }
+        function removeWeeklyItem(item) {
+          setWeeklyStaples(prev => (prev||[]).filter(x => x !== item));
+        }
+
+        function exportList() { toClipboard(groceryText); }
+
+        const recipe = useMemo(() => meals.find(m => m.id === openRecipeFor) || null, [meals, openRecipeFor]);
+
+        return (
+          <div style={{ fontFamily:"ui-sans-serif, system-ui", padding:16, maxWidth:1200, margin:"0 auto" }}>
+            <header style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"baseline", justifyContent:"space-between" }}>
+              <div>
+                <h1 style={{ margin:0, fontSize:28 }}>Costco + Trader Joe’s Planner</h1>
+                <p style={{ marginTop:6, opacity:0.8 }}>Recipes + summed quantities. No build step (static).</p>
               </div>
-              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>Uses ~{lbsPerDinner} lb protein per dinner (rounded to 0.25 lb).</div>
-            </div>
-
-            <div>
-              <h3 style={h3}>Healthy caps</h3>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="checkbox" checked={healthyMode} onChange={(e) => setHealthyMode(e.target.checked)} />
-                  Healthy mode
-                </label>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  Processed/week:
-                  <input type="number" min={0} max={7} value={maxProcessedMeals} onChange={(e) => setMaxProcessedMeals(e.target.value)} style={input} disabled={!healthyMode} />
-                </label>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  Refined-carb/week:
-                  <input
-                    type="number"
-                    min={0}
-                    max={7}
-                    value={maxRefinedCarbMeals}
-                    onChange={(e) => setMaxRefinedCarbMeals(e.target.value)}
-                    style={input}
-                    disabled={!healthyMode}
-                  />
-                </label>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <button onClick={generatePlan} style={btnPrimary}>Generate this week</button>
+                <button onClick={()=>setPlan([])} style={btn}>Clear plan</button>
               </div>
-            </div>
-          </div>
+            </header>
 
-          <h3 style={{ ...h3, marginTop: 12 }}>Costco proteins on hand (lbs)</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, marginTop: 8 }}>
-            {PROTEINS.map((p) => (
-              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "1px solid #e5e7eb", borderRadius: 12, padding: 10 }}>
-                <div>
-                  <div style={{ fontWeight: 650 }}>{p.name}</div>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>{proteinInventory[p.id] || 0} lb</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:12, marginTop:12 }}>
+              <section style={card}>
+                <h2 style={h2}>Setup</h2>
+
+                <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center", marginTop:8 }}>
+                  <label>Weeknights:&nbsp;
+                    <input type="number" min="1" max="7" value={weekNights} onChange={e=>setWeekNights(e.target.value)} style={input} />
+                  </label>
+                  <label>Leftovers:&nbsp;
+                    <input type="number" min="0" max="7" value={leftoversNights} onChange={e=>setLeftoversNights(e.target.value)} style={input} />
+                  </label>
+                  <label>No-repeat days:&nbsp;
+                    <input type="number" min="7" max="42" value={noRepeatDays} onChange={e=>setNoRepeatDays(e.target.value)} style={input} />
+                  </label>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button style={mini} onClick={() => setProteinInventory((prev) => ({ ...prev, [p.id]: roundToQuarter(Math.max(0, (prev[p.id] || 0) - 0.25)) }))}>
-                    −
-                  </button>
-                  <button style={mini} onClick={() => setProteinInventory((prev) => ({ ...prev, [p.id]: roundToQuarter((prev[p.id] || 0) + 0.25) }))}>
-                    +
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
-        <section style={card}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <div>
-              <h2 style={h2}>Meals (with recipes)</h2>
-              <div style={{ marginTop: 6, opacity: 0.8 }}>Click a meal to view its recipe. Toggle “Avoid” to reduce repeats.</div>
-            </div>
-            <button style={btn} onClick={addMeal}>
-              + Add meal
-            </button>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 10, marginTop: 10 }}>
-            {meals.map((m) => (
-              <div key={m.id} style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12 }}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>{m.name}</div>
-                    <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
-                      Proteins: {(m.protein || []).map((id) => PROTEINS.find((p) => p.id === id)?.name || id).join(", ")}
+                    <h3 style={h3}>2-person portion math (raw protein)</h3>
+                    <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:8 }}>
+                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
+                        Male oz:
+                        <input type="number" min="4" max="16" value={maleOz} onChange={e=>setMaleOz(e.target.value)} style={input} />
+                      </label>
+                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
+                        Female oz:
+                        <input type="number" min="3" max="14" value={femaleOz} onChange={e=>setFemaleOz(e.target.value)} style={input} />
+                      </label>
                     </div>
-                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>Tags: {(m.tags || []).join(", ")}</div>
-                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                      Health: {m.healthy ? "✅" : "—"} {m.processed ? "(processed)" : ""} {m.refinedCarb ? "(refined-carb)" : ""}
-                    </div>
+                    <div style={{ marginTop:8, fontSize:12, opacity:0.75 }}>Uses ~{lbsPerDinner} lb protein per dinner (rounded to 0.25 lb).</div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <button style={btn} onClick={() => setOpenRecipeFor(m.id)}>
-                      Recipe
-                    </button>
-                    <button style={avoid.includes(m.id) ? btnDanger : btn} onClick={() => toggleAvoid(m.id)}>
-                      {avoid.includes(m.id) ? "Avoid" : "Include"}
-                    </button>
-                    <button style={btnDanger} onClick={() => deleteMeal(m.id)}>
-                      Delete
-                    </button>
+
+                  <div>
+                    <h3 style={h3}>Healthy caps</h3>
+                    <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:8 }}>
+                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
+                        <input type="checkbox" checked={healthyMode} onChange={e=>setHealthyMode(e.target.checked)} />
+                        Healthy mode
+                      </label>
+                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
+                        Processed/week:
+                        <input type="number" min="0" max="7" value={maxProcessedMeals} onChange={e=>setMaxProcessedMeals(e.target.value)} style={input} disabled={!healthyMode} />
+                      </label>
+                      <label style={{ display:"flex", gap:8, alignItems:"center" }}>
+                        Refined-carb/week:
+                        <input type="number" min="0" max="7" value={maxRefinedMeals} onChange={e=>setMaxRefinedMeals(e.target.value)} style={input} disabled={!healthyMode} />
+                      </label>
+                    </div>
                   </div>
                 </div>
 
-                <MealQuickEditor meal={m} onChange={(patch) => updateMeal(m.id, patch)} />
-              </div>
-            ))}
-          </div>
-        </section>
+                <h3 style={{ ...h3, marginTop:12 }}>Costco proteins on hand (lbs)</h3>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(170px, 1fr))", gap:10, marginTop:8 }}>
+                  {PROTEINS.map(p=>(
+                    <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, border:"1px solid #e5e7eb", borderRadius:12, padding:10 }}>
+                      <div>
+                        <div style={{ fontWeight:650 }}>{p.name}</div>
+                        <div style={{ fontSize:12, opacity:0.75 }}>{proteinInventory[p.id] || 0} lb</div>
+                      </div>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <button style={mini} onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter(Math.max(0, (prev[p.id]||0)-0.25)) }))}>−</button>
+                        <button style={mini} onClick={()=>setProteinInventory(prev=>({ ...prev, [p.id]: roundToQuarter((prev[p.id]||0)+0.25) }))}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-        <section style={card}>
-          <h2 style={h2}>This week’s plan</h2>
-          {planCards.length === 0 ? (
-            <div style={{ opacity: 0.75 }}>No plan yet. Click <b>Generate this week</b>.</div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 10, marginTop: 10 }}>
-              {planCards.map((p) => (
-                <div key={p.date} style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{p.label}</div>
-                      <div style={{ marginTop: 4 }}>{p.kind === "leftovers" ? "Leftovers Night" : p.mealName}</div>
-                      {p.kind === "meal" ? (
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
-                          Protein: <b>{p.proteinName}</b> • Uses: <b>{p.lbsUsed} lb</b>
+              <section style={card}>
+                <h2 style={h2}>Meals (recipes)</h2>
+                <div style={{ marginTop:6, opacity:0.8 }}>Click Recipe to view ingredients + steps. Toggle Avoid to reduce repeats.</div>
+
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:10, marginTop:10 }}>
+                  {meals.map(m=>(
+                    <div key={m.id} style={{ border:"1px solid #e5e7eb", borderRadius:12, padding:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                        <div>
+                          <div style={{ fontWeight:700 }}>{m.name}</div>
+                          <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>
+                            Proteins: {(m.protein||[]).map(id => PROTEINS.find(p=>p.id===id)?.name || id).join(", ")}
+                          </div>
+                          <div style={{ fontSize:12, opacity:0.7, marginTop:2 }}>Tags: {(m.tags||[]).join(", ")}</div>
                         </div>
-                      ) : (
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>Use what’s in the fridge</div>
-                      )}
-                      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>Tags: {(p.tags || []).join(", ")}</div>
-                      {p.kind === "meal" ? (
-                        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button style={btn} onClick={() => setOpenRecipeFor(p.mealId)}>
-                            View recipe
+                        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                          <button style={btn} onClick={()=>setOpenRecipeFor(m.id)}>Recipe</button>
+                          <button style={avoid.includes(m.id) ? btnDanger : btn} onClick={()=>toggleAvoid(m.id)}>
+                            {avoid.includes(m.id) ? "Avoid" : "Include"}
                           </button>
                         </div>
-                      ) : null}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <button style={btnPrimary} onClick={() => markDone(p)}>
-                        Done ✅
-                      </button>
+                  ))}
+                </div>
+              </section>
+
+              <section style={card}>
+                <h2 style={h2}>This week’s plan</h2>
+                {planCards.length===0 ? (
+                  <div style={{ opacity:0.75 }}>No plan yet. Click <b>Generate this week</b>.</div>
+                ) : (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:10, marginTop:10 }}>
+                    {planCards.map(p=>(
+                      <div key={p.date} style={{ border:"1px solid #e5e7eb", borderRadius:12, padding:12 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                          <div>
+                            <div style={{ fontWeight:700 }}>{p.label}</div>
+                            <div style={{ marginTop:4 }}>{p.kind==="leftovers" ? "Leftovers Night" : p.mealName}</div>
+                            {p.kind==="meal" ? (
+                              <div style={{ fontSize:12, opacity:0.75, marginTop:4 }}>
+                                Protein: <b>{p.proteinName}</b> • Uses: <b>{p.lbsUsed} lb</b>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize:12, opacity:0.75, marginTop:4 }}>Use what’s in the fridge</div>
+                            )}
+                            {p.kind==="meal" ? (
+                              <div style={{ marginTop:8, display:"flex", gap:8, flexWrap:"wrap" }}>
+                                <button style={btn} onClick={()=>setOpenRecipeFor(p.mealId)}>View recipe</button>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            <button style={btnPrimary} onClick={()=>markDone(p)}>Done ✅</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section style={card}>
+                <div style={{ display:"flex", justifyContent:"space-between", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+                  <div>
+                    <h2 style={h2}>Trader Joe’s list (with quantities)</h2>
+                    <div style={{ marginTop:6, opacity:0.8 }}>Summed across planned meals + weekly staples, minus pantry staples.</div>
+                  </div>
+                  <button style={btn} onClick={exportList}>Copy list</button>
+                </div>
+
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:10 }}>
+                  <div>
+                    {AISLES.map(a=>{
+                      const items = groceryItems[a] || [];
+                      if (!items.length) return null;
+                      return (
+                        <div key={a} style={{ marginBottom:10 }}>
+                          <div style={{ fontWeight:800, marginBottom:4 }}>{a}</div>
+                          <ul style={{ margin:0, paddingLeft:18 }}>
+                            {items.map((it,idx)=>(
+                              <li key={idx} style={{ padding:"2px 0" }}>{formatLine(it)}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div>
+                    <h3 style={h3}>Weekly staples (always buy)</h3>
+                    <div style={{ display:"flex", gap:8, marginTop:6 }}>
+                      <input value={customWeekly} onChange={e=>setCustomWeekly(e.target.value)} placeholder="Add a weekly staple…" style={{ ...inputWide, flex:1 }} />
+                      <button style={btn} onClick={addWeeklyItem}>Add</button>
+                    </div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:10 }}>
+                      {(weeklyStaples||[]).map(it=>(
+                        <span key={it} style={pill}>
+                          {it}
+                          <button onClick={()=>removeWeeklyItem(it)} style={pillX} aria-label={`remove ${it}`}>×</button>
+                        </span>
+                      ))}
+                    </div>
+
+                    <h3 style={{ ...h3, marginTop:14 }}>Pantry staples (excluded)</h3>
+                    <div style={{ display:"flex", gap:8, marginTop:6 }}>
+                      <input value={customPantry} onChange={e=>setCustomPantry(e.target.value)} placeholder="Add a pantry staple…" style={{ ...inputWide, flex:1 }} />
+                      <button style={btn} onClick={addPantryItem}>Add</button>
+                    </div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:10 }}>
+                      {(pantry||[]).map(it=>(
+                        <span key={it} style={pill}>
+                          {it}
+                          <button onClick={()=>removePantryItem(it)} style={pillX} aria-label={`remove ${it}`}>×</button>
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
-              ))}
+              </section>
             </div>
-          )}
-        </section>
 
-        <section style={card}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <div>
-              <h2 style={h2}>Trader Joe’s list (with quantities)</h2>
-              <div style={{ marginTop: 6, opacity: 0.8 }}>Summed across planned meals + your weekly staples, minus pantry staples.</div>
-            </div>
-            <button style={btn} onClick={exportList}>
-              Copy list
-            </button>
+            {recipe ? <RecipeModal meal={recipe} onClose={()=>setOpenRecipeFor(null)} /> : null}
           </div>
+        );
+      }
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
-            <div>
-              {AISLES.map((a) => {
-                const items = groceryItems[a] || [];
-                if (!items.length) return null;
-                return (
-                  <div key={a} style={{ marginBottom: 10 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 4 }}>{a}</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {items.map((it, idx) => (
-                        <li key={idx} style={{ padding: "2px 0" }}>
-                          {formatLine(it)}
-                        </li>
-                      ))}
-                    </ul>
+      function RecipeModal({ meal, onClose }) {
+        return (
+          <div
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", padding:16, zIndex:50 }}
+            onClick={onClose}
+          >
+            <div
+              style={{ background:"white", borderRadius:16, maxWidth:760, width:"100%", maxHeight:"85vh", overflow:"auto", border:"1px solid #e5e7eb", boxShadow:"0 10px 30px rgba(0,0,0,0.15)" }}
+              onClick={(e)=>e.stopPropagation()}
+            >
+              <div style={{ padding:14, borderBottom:"1px solid #e5e7eb", display:"flex", justifyContent:"space-between", gap:10 }}>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:800 }}>{meal.name}</div>
+                  <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>
+                    {meal.recipe?.timeMins ? `${meal.recipe.timeMins} min` : ""} {meal.tags?.length ? `• ${meal.tags.join(", ")}` : ""}
                   </div>
-                );
-              })}
-            </div>
-
-            <div>
-              <h3 style={h3}>Weekly staples (always buy)</h3>
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                <input value={customWeekly} onChange={(e) => setCustomWeekly(e.target.value)} placeholder="Add a weekly staple…" style={{ ...inputWide, flex: 1 }} />
-                <button style={btn} onClick={addWeeklyItem}>
-                  Add
-                </button>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                {(weeklyStaples || []).map((it) => (
-                  <span key={it} style={pill}>
-                    {it}
-                    <button onClick={() => removeWeeklyItem(it)} style={pillX} aria-label={`remove ${it}`}>
-                      ×
-                    </button>
-                  </span>
-                ))}
+                </div>
+                <button style={btn} onClick={onClose}>Close</button>
               </div>
 
-              <h3 style={{ ...h3, marginTop: 14 }}>Pantry staples (excluded)</h3>
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                <input value={customPantry} onChange={(e) => setCustomPantry(e.target.value)} placeholder="Add a pantry staple…" style={{ ...inputWide, flex: 1 }} />
-                <button style={btn} onClick={addPantryItem}>
-                  Add
-                </button>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                {(pantry || []).map((it) => (
-                  <span key={it} style={pill}>
-                    {it}
-                    <button onClick={() => removePantryItem(it)} style={pillX} aria-label={`remove ${it}`}>
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 14, fontSize: 12, opacity: 0.75 }}>
-                Netlify tip: after you update this file, redeploy by dragging the updated folder to Netlify Drop, or pushing changes to your connected Git repo.
+              <div style={{ padding:14, display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+                <div>
+                  <div style={{ fontWeight:800, marginBottom:6 }}>Ingredients</div>
+                  <ul style={{ margin:0, paddingLeft:18 }}>
+                    {(meal.recipe?.ingredients || []).map((i, idx)=>(
+                      <li key={idx} style={{ padding:"3px 0", opacity: i.optional ? 0.7 : 1 }}>
+                        {formatLine(i)} {i.optional ? "(optional)" : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div style={{ fontWeight:800, marginBottom:6 }}>Steps</div>
+                  <ol style={{ margin:0, paddingLeft:18 }}>
+                    {(meal.recipe?.steps || []).map((s, idx)=>(
+                      <li key={idx} style={{ padding:"3px 0" }}>{s}</li>
+                    ))}
+                  </ol>
+                </div>
               </div>
             </div>
           </div>
-        </section>
-      </div>
+        );
+      }
 
-      {recipe ? (
-        <RecipeModal
-          meal={recipe}
-          onClose={() => setOpenRecipeFor(null)}
-          lbsPerDinner={lbsPerDinner(maleOz, femaleOz)}
-        />
-      ) : null}
-    </div>
-  );
-}
+      const card = { border:"1px solid #e5e7eb", borderRadius:16, padding:14, boxShadow:"0 1px 2px rgba(0,0,0,0.04)" };
+      const h2 = { margin:0, fontSize:18 };
+      const h3 = { margin:"10px 0 0", fontSize:14, opacity:0.9 };
 
-function MealQuickEditor({ meal, onChange }) {
-  // Quick edit: name + ingredients (line-based) + steps (line-based)
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState(meal.name || "");
-  const [ingredientsText, setIngredientsText] = useState(() => (meal.recipe?.ingredients || []).map((i) => `${i.qty} | ${i.unit} | ${i.name}${i.optional ? " | optional" : ""}`).join("
-"));
-  const [stepsText, setStepsText] = useState(() => (meal.recipe?.steps || []).join("
-"));
+      const btn = { border:"1px solid #d1d5db", background:"white", borderRadius:12, padding:"10px 12px", cursor:"pointer" };
+      const btnPrimary = { ...btn, border:"1px solid #111827", background:"#111827", color:"white" };
+      const btnDanger = { ...btn, border:"1px solid #991b1b", background:"#fee2e2", color:"#7f1d1d" };
 
-  useEffect(() => {
-    setName(meal.name || "");
-    setIngredientsText((meal.recipe?.ingredients || []).map((i) => `${i.qty} | ${i.unit} | ${i.name}${i.optional ? " | optional" : ""}`).join("
-"));
-    setStepsText((meal.recipe?.steps || []).join("
-"));
-  }, [meal.id]);
+      const input = { border:"1px solid #d1d5db", borderRadius:12, padding:"10px 12px", width:110 };
+      const inputWide = { border:"1px solid #d1d5db", borderRadius:12, padding:"10px 12px" };
+      const mini = { border:"1px solid #d1d5db", background:"white", borderRadius:10, padding:"6px 10px", cursor:"pointer" };
 
-  function parseIngredients(text) {
-    // lines: qty | unit | name | optional?
-    const lines = (text || "").split("
-").map((l) => l.trim()).filter(Boolean);
-    const out = [];
-    for (const line of lines) {
-      const parts = line.split("|").map((x) => x.trim());
-      const qty = Number(parts[0]);
-      const unit = parts[1] || "";
-      const nm = parts[2] || "";
-      const optional = (parts[3] || "").toLowerCase().includes("optional");
-      if (!nm) continue;
-      out.push({ name: nm, qty: Number.isFinite(qty) ? qty : 1, unit, optional });
-    }
-    return out;
-  }
+      const pill = { display:"inline-flex", alignItems:"center", gap:8, border:"1px solid #e5e7eb", padding:"6px 10px", borderRadius:999, background:"#f9fafb" };
+      const pillX = { border:"none", background:"transparent", cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.7 };
 
-  function save() {
-    const ingredients = parseIngredients(ingredientsText);
-    const steps = (stepsText || "").split("
-").map((s) => s.trim()).filter(Boolean);
-    onChange({
-      name: name.trim() || meal.name,
-      recipe: {
-        ...(meal.recipe || {}),
-        ingredients,
-        steps,
-      },
-    });
-    setOpen(false);
-  }
-
-  return (
-    <div style={{ marginTop: 10 }}>
-      <button style={btn} onClick={() => setOpen((v) => !v)}>
-        {open ? "Hide editor" : "Quick edit recipe"}
-      </button>
-      {open ? (
-        <div style={{ marginTop: 10, borderTop: "1px solid #e5e7eb", paddingTop: 10 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <label>
-              Meal name
-              <input value={name} onChange={(e) => setName(e.target.value)} style={{ ...inputWide, width: "100%" }} />
-            </label>
-            <div style={{ fontSize: 12, opacity: 0.75, alignSelf: "end" }}>
-              Ingredients format: <b>qty | unit | name | optional</b>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-            <label>
-              Ingredients
-              <textarea value={ingredientsText} onChange={(e) => setIngredientsText(e.target.value)} rows={7} style={textarea} />
-            </label>
-            <label>
-              Steps
-              <textarea value={stepsText} onChange={(e) => setStepsText(e.target.value)} rows={7} style={textarea} />
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button style={btnPrimary} onClick={save}>
-              Save
-            </button>
-            <button style={btn} onClick={() => setOpen(false)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function RecipeModal({ meal, onClose }) {
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.35)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        zIndex: 50,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "white",
-          borderRadius: 16,
-          maxWidth: 760,
-          width: "100%",
-          maxHeight: "85vh",
-          overflow: "auto",
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ padding: 14, borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>{meal.name}</div>
-            <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
-              {meal.recipe?.timeMins ? `${meal.recipe.timeMins} min` : ""} {meal.tags?.length ? `• ${meal.tags.join(", ")}` : ""}
-            </div>
-          </div>
-          <button style={btn} onClick={onClose}>
-            Close
-          </button>
-        </div>
-
-        <div style={{ padding: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>Ingredients</div>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {(meal.recipe?.ingredients || []).map((i, idx) => (
-                <li key={idx} style={{ padding: "3px 0", opacity: i.optional ? 0.7 : 1 }}>
-                  {formatLine(i)} {i.optional ? "(optional)" : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>Steps</div>
-            <ol style={{ margin: 0, paddingLeft: 18 }}>
-              {(meal.recipe?.steps || []).map((s, idx) => (
-                <li key={idx} style={{ padding: "3px 0" }}>
-                  {s}
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const card = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
-  padding: 14,
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-};
-
-const h2 = { margin: 0, fontSize: 18 };
-const h3 = { margin: "10px 0 0", fontSize: 14, opacity: 0.9 };
-
-const btn = {
-  border: "1px solid #d1d5db",
-  background: "white",
-  borderRadius: 12,
-  padding: "10px 12px",
-  cursor: "pointer",
-};
-
-const btnPrimary = {
-  ...btn,
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "white",
-};
-
-const btnDanger = {
-  ...btn,
-  border: "1px solid #991b1b",
-  background: "#fee2e2",
-  color: "#7f1d1d",
-};
-
-const input = {
-  border: "1px solid #d1d5db",
-  borderRadius: 12,
-  padding: "10px 12px",
-  width: 110,
-};
-
-const inputWide = {
-  border: "1px solid #d1d5db",
-  borderRadius: 12,
-  padding: "10px 12px",
-};
-
-const textarea = {
-  border: "1px solid #d1d5db",
-  borderRadius: 12,
-  padding: "10px 12px",
-  width: "100%",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-};
-
-const mini = {
-  border: "1px solid #d1d5db",
-  background: "white",
-  borderRadius: 10,
-  padding: "6px 10px",
-  cursor: "pointer",
-};
-
-const pill = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  border: "1px solid #e5e7eb",
-  padding: "6px 10px",
-  borderRadius: 999,
-  background: "#f9fafb",
-};
-
-const pillX = {
-  border: "none",
-  background: "transparent",
-  cursor: "pointer",
-  fontSize: 16,
-  lineHeight: 1,
-  opacity: 0.7,
-};
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
