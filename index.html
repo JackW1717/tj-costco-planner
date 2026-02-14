@@ -192,7 +192,14 @@
 
 <body>
   <div id="root"></div>
-
+<script>
+  window.addEventListener("error", (e) => {
+    const pre = document.createElement("pre");
+    pre.style.cssText = "position:fixed;inset:12px;z-index:99999;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px;overflow:auto;white-space:pre-wrap;font:12px ui-monospace,Menlo,Consolas,monospace";
+    pre.textContent = "App error:\n\n" + (e.error?.stack || e.message || String(e));
+    document.body.appendChild(pre);
+  });
+</script>
   <script type="text/babel" data-presets="env,react">
     const STORAGE_KEY = "tj-costco-planner-static-v26";
 
