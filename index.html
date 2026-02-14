@@ -843,7 +843,9 @@
      **********************/
     function buildGrocery(state){
       const plan = state.plan;
-      if(!plan) return {aisles:new Map(), flat:[]};
+
+  // Backward-compat: older saved plans may not have "dinners" array
+  if(!plan || !Array.isArray(plan.dinners)) return {aisles:new Map(), flat:[]};
 
       const pantry = state.pantry || [];
       const staples = state.staples || [];
