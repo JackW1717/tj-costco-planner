@@ -11,9 +11,8 @@
 
   <style>
     :root{
-      /* lighter-than-black dark theme */
-      --bg0:#0f172a;   /* slate-900-ish */
-      --bg1:#111c33;   /* slightly lighter */
+      --bg0:#0f172a;
+      --bg1:#111c33;
       --card:rgba(255,255,255,.07);
       --card2:rgba(0,0,0,.18);
       --border:rgba(255,255,255,.12);
@@ -27,10 +26,9 @@
       --shadow: 0 14px 40px rgba(0,0,0,.30);
       --r:18px;
 
-      /* NEW: more readable modal */
       --modalBg: rgba(15, 23, 42, .96);
-      --modalCard: rgba(255,255,255,.10);
       --overlay: rgba(0,0,0,.72);
+      --modalCard: rgba(255,255,255,.10);
     }
     *{box-sizing:border-box}
     body{
@@ -87,7 +85,6 @@
       cursor:pointer;
       transition:.12s ease;
       font-size: 13px;
-      user-select:none;
     }
     .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.09)}
     .btn:active{transform: translateY(0px)}
@@ -108,7 +105,6 @@
       font-size:13px;
     }
     .input::placeholder{color: rgba(255,255,255,.40)}
-    select.input{appearance:auto}
     .split{display:grid; grid-template-columns:1fr 1fr; gap:10px}
     @media (max-width:520px){ .split{grid-template-columns:1fr} }
     .twoCol{display:grid; grid-template-columns:1fr 1fr; gap:12px}
@@ -191,9 +187,7 @@
     .switch.on{background: rgba(52,211,153,.18); border-color: rgba(52,211,153,.35)}
     .switch.on::after{left:22px; background: rgba(167,243,208,.96)}
 
-    /* =========================
-       MODAL: less translucent + clickability fix
-       ========================= */
+    /* MODAL */
     .modalOverlay{
       position:fixed; inset:0;
       background: var(--overlay);
@@ -212,7 +206,7 @@
       z-index:60;
     }
     .modal h3{margin:0 0 6px; font-size:15px}
-    .closeRow{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px}
+    .closeRow{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px}
     .cols{display:grid; grid-template-columns: 1.05fr .95fr; gap:12px}
     @media (max-width:820px){ .cols{grid-template-columns:1fr} }
     .smallTable{width:100%; border-collapse:collapse; font-size:12px}
@@ -221,27 +215,21 @@
       border-bottom:1px solid rgba(255,255,255,.10);
       vertical-align:top;
     }
-    .smallTable th{color: rgba(255,255,255,.88); font-weight:700; text-align:left}
+    .smallTable th{color: rgba(255,255,255,.86); font-weight:600; text-align:left}
     ol{margin:6px 0 0 18px; padding:0; line-height:1.5}
 
-    /* Ingredient editor controls inside modal */
-    .iconBtn{
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.08);
-      color: rgba(255,255,255,.90);
-      border-radius:10px;
-      padding:6px 8px;
+    .xbtn{
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.86);
+      padding: 4px 8px;
+      border-radius: 10px;
       cursor:pointer;
       font-size:12px;
-      line-height:1;
-      user-select:none;
+      line-height:1.1;
     }
-    .iconBtn:hover{background: rgba(255,255,255,.12)}
-    .iconBtn.danger{
-      border-color: rgba(251,113,133,.35);
-      background: rgba(251,113,133,.12);
-    }
-    .mutedSmall{color: var(--muted2); font-size:11px}
+    .xbtn:hover{background: rgba(255,255,255,.10)}
+    .mutedStrike{color: rgba(255,255,255,.45); text-decoration: line-through;}
   </style>
 </head>
 
@@ -252,7 +240,7 @@
   (function(){
     "use strict";
 
-    // ✅ MUST NOT CHANGE (except when you intentionally want to reset everyone’s local data)
+    // ✅ MUST NOT CHANGE (stable key preserves user data)
     const STORAGE_KEY = "tj-costco-planner-static-v26";
 
     const e = React.createElement;
@@ -290,7 +278,11 @@
       return Math.round((db - da) / (1000*60*60*24));
     }
     function norm(s){
-      return (s||"").toLowerCase().replace(/&/g," and ").replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+      return (s||"").toLowerCase()
+        .replace(/&/g," and ")
+        .replace(/[^a-z0-9\s]/g," ")
+        .replace(/\s+/g," ")
+        .trim();
     }
     function singularize(s){
       return s
@@ -334,6 +326,74 @@
       return `${qty} ${unit}`;
     }
 
+    function downloadTextFile(filename, text){
+      try{
+        const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=> URL.revokeObjectURL(url), 500);
+      }catch(err){
+        console.warn("download failed", err);
+      }
+    }
+
+    async function copyToClipboard(text){
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      }catch(_){}
+      // fallback
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        ta.remove();
+        return !!ok;
+      }catch(err){
+        console.warn("copy fallback failed", err);
+        return false;
+      }
+    }
+
+    function openPrintWindow(title, text){
+      const w = window.open("", "_blank");
+      if(!w) return;
+      const safeTitle = (title || "Grocery List").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const safeText = (text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      w.document.open();
+      w.document.write(
+        `<!doctype html><html><head><meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title>${safeTitle}</title>
+        <style>
+          body{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding:24px; line-height:1.35}
+          h1{margin:0 0 12px; font-size:18px}
+          pre{white-space:pre-wrap; font-size:12.5px; margin:0}
+          .hint{color:#555; font-size:12px; margin:0 0 14px}
+          @media print{ .hint{display:none} }
+        </style></head><body>
+        <h1>${safeTitle}</h1>
+        <div class="hint">Tip: Print or Save as PDF.</div>
+        <pre>${safeText}</pre>
+        <script>window.onload=function(){ window.print(); }<\/script>
+        </body></html>`
+      );
+      w.document.close();
+    }
+
     // -----------------------------
     // Aisles
     // -----------------------------
@@ -347,16 +407,7 @@
       BAKERY:"Bakery",
       SNACKS:"Snacks",
     };
-    const AISLE_ORDER = [
-      AISLES.PRODUCE,
-      AISLES.DELI,
-      AISLES.DAIRY,
-      AISLES.FROZEN,
-      AISLES.BAKERY,
-      AISLES.PANTRY,
-      AISLES.SPICES,
-      AISLES.SNACKS
-    ];
+    const AISLE_ORDER = [AISLES.PRODUCE, AISLES.DELI, AISLES.DAIRY, AISLES.FROZEN, AISLES.BAKERY, AISLES.PANTRY, AISLES.SPICES, AISLES.SNACKS];
 
     function guessAisleForName(name){
       const s = norm(name);
@@ -371,23 +422,11 @@
     }
 
     // -----------------------------
-    // Meals (84) — compact encoding to keep file small & fast
-    //
-    // Format:
-    // [id, name, protein, cuisine, vegTagsCSV, sideTagsCSV, processed(0/1), refined(0/1), vegForward(0/1), ingredientsStr, stepsStr]
-    //
-    // ingredientsStr:
-    //   itemName|qty|unit|aisle;itemName|qty|unit|aisle;...
-    //
-    // stepsStr:
-    //   Step 1|Step 2|Step 3
+    // Meals (84) — compact encoding
+    // NOTE: Using the MEAL_ROWS you pasted. Unchanged content.
     // -----------------------------
     const MEAL_ROWS = [
-      /* ====== YOUR ORIGINAL MEAL_ROWS CONTINUES UNCHANGED ======
-         (I kept it exactly as you provided, starting beef-01 ... shrimp-12)
-         Paste your full MEAL_ROWS here. For convenience, I left your provided list as-is below.
-      */
-      // Beef (12)
+      /* Beef (12) */
       ["beef-01","Garlic-lime steak + fajita peppers & onions + cilantro rice","beef","mexican","peppers,onions","rice",0,0,1,
         "Bell peppers (mixed)|3|each|Produce;Yellow onion|1|each|Produce;Cilantro|1|each|Produce;Limes|2|each|Produce;Jasmine rice|1|bag|Pantry;Chili-lime seasoning|1|each|Spices/Sauces",
         "Sear steak; rest & slice|Sauté peppers + onions|Cook rice; stir in cilantro + lime"
@@ -437,16 +476,313 @@
         "Sear beef with shawarma seasoning|Cook rice; chop veg|Assemble bowls with hummus + lemon"
       ],
 
-      /* ======
-         IMPORTANT:
-         Keep the rest of your original MEAL_ROWS exactly as you had it
-         (chicken-01 ... shrimp-12).
-         ====== */
+      /* Chicken (14) */
+      ["chicken-01","Grilled chicken + zucchini + couscous + lemon-herb yogurt","chicken","mediterranean","zucchini","couscous",0,1,1,
+        "Zucchini|3|each|Produce;Couscous|1|box|Pantry;Greek yogurt|1|each|Dairy;Lemon|1|each|Produce;Dill (or parsley)|1|each|Produce",
+        "Cook chicken|Sauté zucchini; cook couscous|Stir yogurt + lemon + herbs; dollop"
+      ],
+      ["chicken-02","Pesto chicken + cherry tomatoes + spinach + orzo","chicken","italian","tomatoes,spinach","pasta",0,1,1,
+        "Cherry tomatoes|1|pack|Produce;Baby spinach|1|bag|Produce;Orzo|1|box|Pantry;Pesto|1|jar|Deli/Prepared;Parmesan|1|pack|Dairy",
+        "Cook orzo; toss pesto|Sear chicken; slice|Wilt spinach; warm tomatoes; combine"
+      ],
+      ["chicken-03","Chicken taco bowls + roasted sweet potatoes + romaine + salsa","chicken","mexican","sweet potatoes,romaine","none",0,0,1,
+        "Sweet potatoes|2|each|Produce;Romaine hearts|1|pack|Produce;Salsa|1|jar|Deli/Prepared;Avocados|2|each|Produce;Taco seasoning|1|each|Spices/Sauces",
+        "Roast sweet potatoes|Cook chicken with taco seasoning|Build bowls with romaine, salsa, avocado"
+      ],
+      ["chicken-04","Teriyaki chicken + broccoli + carrots + rice","chicken","japanese","broccoli,carrots","rice",0,0,1,
+        "Broccoli florets|1|bag|Produce;Carrots|1|bag|Produce;Jasmine rice|1|bag|Pantry;Teriyaki sauce|1|bottle|Spices/Sauces",
+        "Cook rice|Stir-fry chicken + veg|Add light teriyaki; serve"
+      ],
+      ["chicken-05","Chicken + roasted Brussels sprouts + cauliflower mash","chicken","new american","brussels sprouts,cauliflower","none",0,0,1,
+        "Brussels sprouts|1|bag|Produce;Cauliflower florets|1|bag|Frozen;Garlic|1|each|Produce;Butter (or olive oil)|1|each|Dairy",
+        "Roast Brussels sprouts|Mash cauliflower with garlic|Pan-sear chicken; serve"
+      ],
+      ["chicken-06","Quick chicken curry + spinach + cauliflower rice","chicken","indian","spinach,cauliflower","none",0,0,1,
+        "Baby spinach|1|bag|Produce;Cauliflower rice|1|bag|Frozen;Coconut milk|1|can|Pantry;Curry powder|1|each|Spices/Sauces;Onion|1|each|Produce",
+        "Sauté onion + curry|Simmer chicken in coconut milk|Wilt spinach; serve over cauli rice"
+      ],
+      ["chicken-07","Chicken shawarma + cucumber-tomato salad + farro","chicken","middle eastern","cucumbers,tomatoes","farro",0,0,1,
+        "Cucumber|1|each|Produce;Tomatoes|2|each|Produce;Cooked farro (10-min)|1|pack|Pantry;Shawarma seasoning|1|each|Spices/Sauces;Lemon|1|each|Produce",
+        "Cook chicken with shawarma seasoning|Toss cucumber + tomato + lemon|Serve with farro"
+      ],
+      ["chicken-08","Chicken + mushrooms + green beans + pasta","chicken","new american","mushrooms,green beans","orzo",0,1,1,
+        "Green beans|1|bag|Produce;Cremini mushrooms|1|pack|Produce;Orzo|1|box|Pantry;Garlic|1|each|Produce;Butter|1|each|Dairy",
+        "Cook orzo; stir in garlic butter|Sear chicken|Sauté mushrooms + green beans; plate"
+      ],
+      ["chicken-09","Chicken stir-fry + bok choy + peppers + rice noodles","chicken","thai","bok choy,peppers","noodles",0,1,1,
+        "Bok choy|2|each|Produce;Bell peppers|2|each|Produce;Rice noodles|1|pack|Pantry;Soy sauce|1|bottle|Spices/Sauces;Lime|1|each|Produce",
+        "Soak noodles|Stir-fry chicken + veg|Sauce soy + lime; serve"
+      ],
+      ["chicken-10","Harissa chicken + roasted eggplant + couscous","chicken","north african","eggplant","couscous",0,1,1,
+        "Eggplant|1|each|Produce;Couscous|1|box|Pantry;Harissa paste|1|jar|Spices/Sauces;Lemon|1|each|Produce",
+        "Roast eggplant cubes|Cook chicken with harissa|Cook couscous; finish lemon"
+      ],
+      ["chicken-11","Chicken + roasted carrots + asparagus + farro","chicken","new american","carrots,asparagus","farro",0,0,1,
+        "Carrots|1|bag|Produce;Asparagus|1|each|Produce;Cooked farro (10-min)|1|pack|Pantry;Lemon|1|each|Produce",
+        "Roast carrots; add asparagus|Cook chicken with lemon/pepper|Serve with farro"
+      ],
+      ["chicken-12","Chicken lettuce wraps + cucumbers + carrots + peanut sauce","chicken","asian","lettuce,cucumbers,carrots","none",0,0,1,
+        "Butter lettuce|1|each|Produce;Cucumber|1|each|Produce;Carrots|1|bag|Produce;Peanut butter|1|jar|Pantry;Soy sauce|1|bottle|Spices/Sauces;Lime|1|each|Produce",
+        "Cook chicken; chop|Mix peanut sauce (PB+soy+lime+water)|Serve in lettuce cups with veg"
+      ],
+      ["chicken-13","Chicken + roasted cabbage wedges + carrots + rice","chicken","new american","cabbage,carrots","rice",0,0,1,
+        "Cabbage|1|each|Produce;Carrots|1|bag|Produce;Rice|1|bag|Pantry",
+        "Roast cabbage wedges + carrots|Cook rice|Pan-sear chicken; serve"
+      ],
+      ["chicken-14","Chicken + roasted cauliflower + peppers + rice","chicken","new american","cauliflower,peppers","rice",0,0,1,
+        "Cauliflower florets|1|bag|Produce;Bell peppers|2|each|Produce;Rice|1|bag|Pantry",
+        "Roast cauliflower + peppers|Cook rice|Cook chicken; serve"
+      ],
 
-      /* I’m not truncating it on purpose here for logic reasons — it’s just extremely long.
-         If you want, I can paste the entire thing again, but your safest move is:
-         keep your existing MEAL_ROWS block and replace the rest of the file with this updated one.
-      */
+      /* Turkey (12) */
+      ["turkey-01","Turkey meatballs + sweet potatoes + green beans","turkey","new american","sweet potatoes,green beans","none",0,0,1,
+        "Sweet potatoes|2|each|Produce;Green beans|1|bag|Produce;Italian seasoning|1|each|Spices/Sauces",
+        "Roast sweet potatoes|Bake/pan-sear turkey meatballs|Sauté green beans"
+      ],
+      ["turkey-02","Turkey taco bowls + cabbage slaw + black beans + rice","turkey","mexican","cabbage","rice",0,0,1,
+        "Shredded cabbage mix|1|bag|Produce;Black beans|2|can|Pantry;Brown rice|1|bag|Pantry;Taco seasoning|1|each|Spices/Sauces;Lime|1|each|Produce",
+        "Cook rice; warm beans|Brown turkey with taco seasoning|Slaw: cabbage + lime; assemble"
+      ],
+      ["turkey-03","Turkey burgers (no bun default) + mushrooms + asparagus","turkey","american","mushrooms,asparagus","none",0,0,1,
+        "Cremini mushrooms|1|pack|Produce;Asparagus|1|each|Produce;Mustard|1|each|Spices/Sauces",
+        "Pan-sear patties|Sauté mushrooms; roast asparagus|Serve (bun optional)"
+      ],
+      ["turkey-04","Turkey skillet + zucchini + peppers + pasta","turkey","mediterranean","zucchini,peppers","orzo",0,1,1,
+        "Zucchini|2|each|Produce;Bell peppers|2|each|Produce;Orzo|1|box|Pantry;Garlic|1|each|Produce",
+        "Cook orzo|Brown turkey|Add veg + garlic; serve over orzo"
+      ],
+      ["turkey-05","Turkey chili + tomatoes + peppers + side salad","turkey","tex-mex","tomatoes,peppers","none",0,0,1,
+        "Diced tomatoes|2|can|Pantry;Bell pepper|1|each|Produce;Kidney beans|2|can|Pantry;Chili powder|1|each|Spices/Sauces;Mixed greens|1|bag|Produce",
+        "Brown turkey + pepper|Simmer with tomatoes + beans|Serve with salad"
+      ],
+      ["turkey-06","Turkey meat sauce + spinach + pasta (or lentil pasta)","turkey","italian","spinach","pasta",0,1,1,
+        "Baby spinach|1|bag|Produce;Marinara|1|jar|Pantry;Spaghetti (or lentil pasta)|1|box|Pantry;Parmesan|1|pack|Dairy",
+        "Brown turkey; add marinara|Cook pasta|Wilt spinach into sauce; serve"
+      ],
+      ["turkey-07","Turkey lettuce wraps + cucumbers + carrots + rice","turkey","asian","lettuce,cucumbers,carrots","rice",0,0,1,
+        "Butter lettuce|1|each|Produce;Cucumber|1|each|Produce;Carrots|1|bag|Produce;Jasmine rice|1|bag|Pantry;Soy sauce|1|bottle|Spices/Sauces",
+        "Cook rice|Brown turkey with soy + garlic|Serve in lettuce; rice on side"
+      ],
+      ["turkey-08","Turkey meatballs + pesto + roasted zucchini + farro","turkey","italian","zucchini","farro",0,0,1,
+        "Zucchini|2|each|Produce;Cooked farro (10-min)|1|pack|Pantry;Pesto|1|jar|Deli/Prepared;Parmesan|1|pack|Dairy",
+        "Roast zucchini|Cook meatballs|Toss farro with pesto; top"
+      ],
+      ["turkey-09","Turkey + roasted cauliflower + green beans + rice","turkey","new american","cauliflower,green beans","rice",0,0,1,
+        "Cauliflower florets|1|bag|Produce;Green beans|1|bag|Produce;Rice|1|bag|Pantry",
+        "Roast cauliflower|Sauté green beans|Brown turkey; serve with rice"
+      ],
+      ["turkey-10","Turkey kofta + roasted carrots + cucumber yogurt + couscous","turkey","middle eastern","carrots,cucumbers","couscous",0,1,1,
+        "Carrots|1|bag|Produce;Cucumber|1|each|Produce;Greek yogurt|1|each|Dairy;Couscous|1|box|Pantry;Cumin|1|each|Spices/Sauces",
+        "Roast carrots|Pan-sear kofta|Mix yogurt+cucumber; serve with couscous"
+      ],
+      ["turkey-11","Turkey “fried rice” + cauliflower rice + peas & carrots","turkey","chinese","cauliflower,carrots,peas","none",0,0,1,
+        "Cauliflower rice|1|bag|Frozen;Frozen peas & carrots|1|bag|Frozen;Eggs|4|each|Dairy;Soy sauce|1|bottle|Spices/Sauces;Green onions|1|each|Produce",
+        "Brown turkey|Scramble eggs; add cauli rice + peas/carrots|Season soy; top green onion"
+      ],
+      ["turkey-12","Turkey bolognese + mushrooms + orzo","turkey","italian","mushrooms","orzo",0,1,1,
+        "Cremini mushrooms|1|pack|Produce;Marinara|1|jar|Pantry;Orzo|1|box|Pantry",
+        "Cook orzo|Sauté mushrooms; brown turkey; add marinara|Serve over orzo"
+      ],
+
+      /* Sausage (12) */
+      ["saus-01","Sausage + peppers + onions + roasted potatoes","sausage","italian","peppers,onions","potatoes",1,0,1,
+        "Bell peppers|2|each|Produce;Onion|1|each|Produce;Baby potatoes|1|bag|Produce",
+        "Roast potatoes|Brown sausage; sauté peppers+onions|Combine and serve"
+      ],
+      ["saus-02","Sausage + kale + white beans + lemon (one-pan)","sausage","new american","kale","none",1,0,1,
+        "Kale|1|bag|Produce;Cannellini beans|2|can|Pantry;Garlic|1|each|Produce;Lemon|1|each|Produce",
+        "Brown sausage|Sauté garlic+kale; add beans|Return sausage; finish lemon"
+      ],
+      ["saus-03","Sausage + Brussels sprouts + farro + mustard vinaigrette","sausage","new american","brussels sprouts","farro",1,0,1,
+        "Brussels sprouts|1|bag|Produce;Cooked farro (10-min)|1|pack|Pantry;Dijon mustard|1|each|Spices/Sauces;Apple cider vinegar|1|bottle|Spices/Sauces",
+        "Roast Brussels sprouts|Brown sausage slices|Toss farro with Dijon + vinegar"
+      ],
+      ["saus-04","Sausage + zucchini + marinara + pasta","sausage","italian","zucchini","orzo",1,1,1,
+        "Zucchini|2|each|Produce;Marinara|1|jar|Pantry;Orzo|1|box|Pantry",
+        "Cook orzo|Brown sausage; add zucchini|Add marinara; serve"
+      ],
+      ["saus-05","Sausage & cabbage stir-fry + carrots + rice","sausage","asian","cabbage,carrots","rice",1,0,1,
+        "Cabbage|1|each|Produce;Carrots|1|bag|Produce;Rice|1|bag|Pantry;Soy sauce|1|bottle|Spices/Sauces",
+        "Cook rice|Brown sausage|Add cabbage+carrots; season soy"
+      ],
+      ["saus-06","Sausage + spinach + tomatoes + polenta","sausage","italian","spinach,tomatoes","polenta",1,0,1,
+        "Baby spinach|1|bag|Produce;Cherry tomatoes|1|pack|Produce;Polenta (tube)|1|pack|Deli/Prepared",
+        "Brown sausage|Sauté tomatoes; wilt spinach|Pan-crisp polenta; top"
+      ],
+      ["saus-07","Sausage sheet-pan + cauliflower + broccoli + potatoes","sausage","new american","cauliflower,broccoli","potatoes",1,0,1,
+        "Cauliflower florets|1|bag|Produce;Broccoli florets|1|bag|Produce;Baby potatoes|1|bag|Produce",
+        "Roast potatoes|Add sausage+veg; roast until browned|Serve"
+      ],
+      ["saus-08","Sausage + mushrooms + green beans + rice","sausage","new american","mushrooms,green beans","rice",1,0,1,
+        "Cremini mushrooms|1|pack|Produce;Green beans|1|bag|Produce;Rice|1|bag|Pantry",
+        "Cook rice|Brown sausage|Sauté mushrooms+green beans; serve"
+      ],
+      ["saus-09","Sausage + eggplant + tomatoes + couscous","sausage","mediterranean","eggplant,tomatoes","couscous",1,1,1,
+        "Eggplant|1|each|Produce;Tomatoes|2|each|Produce;Couscous|1|box|Pantry",
+        "Roast eggplant cubes|Brown sausage; add tomatoes|Serve over couscous"
+      ],
+      ["saus-10","Sausage + roasted carrots + Brussels sprouts + farro","sausage","new american","carrots,brussels sprouts","farro",1,0,1,
+        "Carrots|1|bag|Produce;Brussels sprouts|1|bag|Produce;Cooked farro (10-min)|1|pack|Pantry",
+        "Roast carrots + Brussels sprouts|Brown sausage slices|Serve with farro"
+      ],
+      ["saus-11","Sausage tacos + peppers + onions + tortillas","sausage","tex-mex","peppers,onions","tortillas",1,1,1,
+        "Bell peppers|2|each|Produce;Onion|1|each|Produce;Corn tortillas|1|pack|Bakery;Salsa|1|jar|Deli/Prepared",
+        "Sauté peppers+onions; brown sausage|Warm tortillas|Assemble with salsa"
+      ],
+      ["saus-12","Sausage + spinach + chickpeas + lemon (one-pan)","sausage","mediterranean","spinach","none",1,0,1,
+        "Baby spinach|1|bag|Produce;Chickpeas|2|can|Pantry;Lemon|1|each|Produce;Garlic|1|each|Produce",
+        "Brown sausage|Sauté garlic; add chickpeas + spinach|Finish lemon; serve"
+      ],
+
+      /* Pork (12) */
+      ["pork-01","Pork chops + roasted Brussels sprouts + sweet potatoes","pork","new american","brussels sprouts,sweet potatoes","none",0,0,1,
+        "Brussels sprouts|1|bag|Produce;Sweet potatoes|2|each|Produce;Apple cider vinegar|1|bottle|Spices/Sauces",
+        "Roast sprouts + sweet potatoes|Pan-sear pork chops|Splash sprouts with cider vinegar"
+      ],
+      ["pork-02","Pork stir-fry + bok choy + mushrooms + rice","pork","chinese","bok choy,mushrooms","rice",0,0,1,
+        "Bok choy|2|each|Produce;Cremini mushrooms|1|pack|Produce;Rice|1|bag|Pantry;Soy sauce|1|bottle|Spices/Sauces;Ginger|1|each|Produce",
+        "Cook rice|Stir-fry pork + ginger; add veg|Season soy; serve"
+      ],
+      ["pork-03","Pork carnitas bowls + cabbage + pico + rice","pork","mexican","cabbage,tomatoes","rice",0,0,1,
+        "Shredded cabbage mix|1|bag|Produce;Tomatoes|2|each|Produce;Cilantro|1|each|Produce;Lime|1|each|Produce;Rice|1|bag|Pantry",
+        "Cook rice|Cook pork carnitas-style|Top with cabbage + pico (tomato/cilantro/lime)"
+      ],
+      ["pork-04","Pork + roasted cauliflower + green beans + farro","pork","new american","cauliflower,green beans","farro",0,0,1,
+        "Cauliflower florets|1|bag|Produce;Green beans|1|bag|Produce;Cooked farro (10-min)|1|pack|Pantry",
+        "Roast cauliflower|Sauté green beans|Pan-sear pork; serve with farro"
+      ],
+      ["pork-05","Pork tenderloin + spinach + tomatoes + couscous","pork","mediterranean","spinach,tomatoes","couscous",0,1,1,
+        "Baby spinach|1|bag|Produce;Cherry tomatoes|1|pack|Produce;Couscous|1|box|Pantry;Lemon|1|each|Produce",
+        "Cook couscous|Sear pork; slice|Sauté tomatoes; wilt spinach; finish lemon"
+      ],
+      ["pork-06","Pork + roasted carrots + asparagus + rice","pork","new american","carrots,asparagus","rice",0,0,1,
+        "Carrots|1|bag|Produce;Asparagus|1|each|Produce;Rice|1|bag|Pantry",
+        "Roast carrots; add asparagus|Cook rice|Pan-sear pork; serve"
+      ],
+      ["pork-07","Pork lettuce wraps + cucumbers + carrots + lime","pork","asian","lettuce,cucumbers,carrots","none",0,0,1,
+        "Butter lettuce|1|each|Produce;Cucumber|1|each|Produce;Carrots|1|bag|Produce;Lime|1|each|Produce;Soy sauce|1|bottle|Spices/Sauces",
+        "Cook pork with soy|Serve in lettuce cups with veg|Squeeze lime"
+      ],
+      ["pork-08","Pork + mushrooms + cabbage + rice noodles","pork","thai","mushrooms,cabbage","noodles",0,1,1,
+        "Cabbage|1|each|Produce;Cremini mushrooms|1|pack|Produce;Rice noodles|1|pack|Pantry;Lime|1|each|Produce;Soy sauce|1|bottle|Spices/Sauces",
+        "Soak noodles|Stir-fry pork + mushrooms + cabbage|Season soy + lime; serve"
+      ],
+      ["pork-09","Pork + roasted eggplant + tomatoes + couscous","pork","mediterranean","eggplant,tomatoes","couscous",0,1,1,
+        "Eggplant|1|each|Produce;Tomatoes|2|each|Produce;Couscous|1|box|Pantry",
+        "Roast eggplant cubes|Cook couscous|Cook pork; simmer tomatoes; combine"
+      ],
+      ["pork-10","Pork + roasted Brussels sprouts + cauliflower mash","pork","new american","brussels sprouts,cauliflower","none",0,0,1,
+        "Brussels sprouts|1|bag|Produce;Cauliflower florets|1|bag|Frozen;Butter|1|each|Dairy",
+        "Roast Brussels sprouts|Mash cauliflower|Pan-sear pork; serve"
+      ],
+      ["pork-11","Pork + kale + mushrooms + farro","pork","new american","kale,mushrooms","farro",0,0,1,
+        "Kale|1|bag|Produce;Cremini mushrooms|1|pack|Produce;Cooked farro (10-min)|1|pack|Pantry",
+        "Cook farro|Sauté kale + mushrooms|Pan-sear pork; serve"
+      ],
+      ["pork-12","Pork tacos + peppers + onions + tortillas","pork","mexican","peppers,onions","tortillas",0,1,1,
+        "Bell peppers|2|each|Produce;Onion|1|each|Produce;Corn tortillas|1|pack|Bakery;Salsa|1|jar|Deli/Prepared;Cilantro|1|each|Produce;Lime|1|each|Produce",
+        "Cook pork with taco spices|Sauté peppers+onions|Warm tortillas; assemble"
+      ],
+
+      /* Salmon (12) */
+      ["salmon-01","Salmon + zucchini + couscous + lemon-dill","salmon","mediterranean","zucchini","couscous",0,1,1,
+        "Zucchini|2|each|Produce;Couscous|1|box|Pantry;Lemon|1|each|Produce;Dill|1|each|Produce",
+        "Cook salmon|Sauté zucchini; cook couscous|Finish with lemon + dill"
+      ],
+      ["salmon-02","Miso salmon + bok choy + mushrooms + rice","salmon","japanese","bok choy,mushrooms","rice",0,0,1,
+        "Bok choy|2|each|Produce;Cremini mushrooms|1|pack|Produce;Rice|1|bag|Pantry;Miso paste|1|each|Spices/Sauces;Soy sauce|1|bottle|Spices/Sauces",
+        "Bake salmon with miso+soy glaze|Sauté bok choy+mushrooms|Serve with rice"
+      ],
+      ["salmon-03","Salmon + roasted Brussels sprouts + sweet potatoes","salmon","new american","brussels sprouts,sweet potatoes","none",0,0,1,
+        "Brussels sprouts|1|bag|Produce;Sweet potatoes|2|each|Produce;Lemon|1|each|Produce",
+        "Roast sprouts + sweet potatoes|Bake salmon|Squeeze lemon"
+      ],
+      ["salmon-04","Salmon bowls + spinach + cucumber + avocado + rice","salmon","fusion","spinach,cucumbers,avocado","rice",0,0,1,
+        "Baby spinach|1|bag|Produce;Cucumber|1|each|Produce;Avocados|2|each|Produce;Rice|1|bag|Pantry;Sesame seeds|1|each|Spices/Sauces",
+        "Cook rice|Cook salmon; flake|Bowl with spinach, cucumber, avocado; sesame"
+      ],
+      ["salmon-05","Salmon + asparagus + farro + lemon-dill","salmon","mediterranean","asparagus","farro",0,0,1,
+        "Asparagus|1|each|Produce;Cooked farro (10-min)|1|pack|Pantry;Lemon|1|each|Produce;Dill|1|each|Produce",
+        "Cook farro|Roast asparagus; cook salmon|Finish lemon + dill"
+      ],
+      ["salmon-06","Salmon + cauliflower + green beans + rice","salmon","new american","cauliflower,green beans","rice",0,0,1,
+        "Cauliflower florets|1|bag|Produce;Green beans|1|bag|Produce;Rice|1|bag|Pantry",
+        "Roast cauliflower|Sauté green beans|Cook salmon; serve with rice"
+      ],
+      ["salmon-07","Salmon tacos + cabbage slaw + avocado + tortillas","salmon","mexican","cabbage,avocado","tortillas",0,1,1,
+        "Shredded cabbage mix|1|bag|Produce;Avocados|2|each|Produce;Corn tortillas|1|pack|Bakery;Lime|1|each|Produce;Greek yogurt|1|each|Dairy",
+        "Cook salmon; flake|Slaw: cabbage + lime + yogurt|Warm tortillas; assemble"
+      ],
+      ["salmon-08","Mediterranean salmon + roasted eggplant + tomatoes + couscous","salmon","mediterranean","eggplant,tomatoes","couscous",0,1,1,
+        "Eggplant|1|each|Produce;Tomatoes|2|each|Produce;Couscous|1|box|Pantry",
+        "Roast eggplant + tomatoes|Cook salmon|Cook couscous; serve"
+      ],
+      ["salmon-09","Spicy salmon bowls + carrots + cucumbers + cauliflower rice","salmon","fusion","carrots,cucumbers,cauliflower","none",0,0,1,
+        "Carrots|1|bag|Produce;Cucumber|1|each|Produce;Cauliflower rice|1|bag|Frozen;Sriracha|1|bottle|Spices/Sauces;Greek yogurt|1|each|Dairy",
+        "Cook cauliflower rice|Cook salmon|Drizzle yogurt+sriracha; add carrots+cucumber"
+      ],
+      ["salmon-10","Salmon + spinach + mushrooms + orzo","salmon","italian","spinach,mushrooms","orzo",0,1,1,
+        "Baby spinach|1|bag|Produce;Cremini mushrooms|1|pack|Produce;Orzo|1|box|Pantry;Lemon|1|each|Produce",
+        "Cook orzo|Sauté mushrooms; wilt spinach|Cook salmon; finish lemon; serve"
+      ],
+      ["salmon-11","Salmon + roasted peppers + zucchini + farro","salmon","mediterranean","peppers,zucchini","farro",0,0,1,
+        "Bell peppers|2|each|Produce;Zucchini|2|each|Produce;Cooked farro (10-min)|1|pack|Pantry",
+        "Roast peppers+zucchini|Cook salmon|Serve with farro"
+      ],
+      ["salmon-12","Salmon + roasted cauliflower + cucumber salad + rice","salmon","new american","cauliflower,cucumbers","rice",0,0,1,
+        "Cauliflower florets|1|bag|Produce;Cucumber|1|each|Produce;Rice|1|bag|Pantry;Rice vinegar|1|bottle|Spices/Sauces",
+        "Roast cauliflower|Cook rice|Cucumber salad with vinegar|Cook salmon; serve"
+      ],
+
+      /* Shrimp (12) */
+      ["shrimp-01","Shrimp + zucchini + garlic + pasta","shrimp","italian","zucchini","orzo",0,1,1,
+        "Zucchini|2|each|Produce;Orzo|1|box|Pantry;Garlic|1|each|Produce;Lemon|1|each|Produce",
+        "Cook orzo|Sauté zucchini+garlic; add shrimp 3–4 min|Finish lemon; toss"
+      ],
+      ["shrimp-02","Shrimp tacos + cabbage slaw + avocado + tortillas","shrimp","mexican","cabbage,avocado","tortillas",0,1,1,
+        "Shredded cabbage mix|1|bag|Produce;Avocados|2|each|Produce;Corn tortillas|1|pack|Bakery;Limes|2|each|Produce;Greek yogurt|1|each|Dairy",
+        "Cook shrimp with chili+lime|Slaw: cabbage + lime + yogurt|Warm tortillas; assemble"
+      ],
+      ["shrimp-03","Shrimp stir-fry + bok choy + mushrooms + rice","shrimp","chinese","bok choy,mushrooms","rice",0,0,1,
+        "Bok choy|2|each|Produce;Cremini mushrooms|1|pack|Produce;Rice|1|bag|Pantry;Soy sauce|1|bottle|Spices/Sauces;Ginger|1|each|Produce",
+        "Cook rice|Stir-fry mushrooms+bok choy|Add shrimp; season soy+ginger"
+      ],
+      ["shrimp-04","Shrimp + roasted asparagus + farro + lemon","shrimp","mediterranean","asparagus","farro",0,0,1,
+        "Asparagus|1|each|Produce;Cooked farro (10-min)|1|pack|Pantry;Lemon|1|each|Produce",
+        "Roast asparagus|Sauté shrimp quickly|Serve with farro + lemon"
+      ],
+      ["shrimp-05","Shrimp curry + spinach + cauliflower rice","shrimp","thai","spinach,cauliflower","none",0,0,1,
+        "Baby spinach|1|bag|Produce;Cauliflower rice|1|bag|Frozen;Coconut milk|1|can|Pantry;Red curry paste|1|jar|Spices/Sauces",
+        "Simmer coconut milk + curry paste|Add shrimp 3–4 min; wilt spinach|Serve over cauli rice"
+      ],
+      ["shrimp-06","Shrimp + roasted Brussels sprouts + sweet potatoes","shrimp","new american","brussels sprouts,sweet potatoes","none",0,0,1,
+        "Brussels sprouts|1|bag|Produce;Sweet potatoes|2|each|Produce",
+        "Roast sprouts + sweet potatoes|Quick-sauté shrimp|Serve"
+      ],
+      ["shrimp-07","Shrimp bowls + cucumbers + carrots + rice noodles + lime","shrimp","vietnamese","cucumbers,carrots","noodles",0,1,1,
+        "Cucumber|1|each|Produce;Carrots|1|bag|Produce;Rice noodles|1|pack|Pantry;Limes|2|each|Produce;Fish sauce (optional)|1|bottle|Spices/Sauces",
+        "Soak noodles|Cook shrimp|Quick lime dressing; bowl with cucumber+carrot"
+      ],
+      ["shrimp-08","Shrimp + roasted cauliflower + green beans + rice","shrimp","new american","cauliflower,green beans","rice",0,0,1,
+        "Cauliflower florets|1|bag|Produce;Green beans|1|bag|Produce;Rice|1|bag|Pantry",
+        "Roast cauliflower|Sauté green beans|Cook shrimp; serve with rice"
+      ],
+      ["shrimp-09","Shrimp + mushrooms + spinach + couscous","shrimp","mediterranean","mushrooms,spinach","couscous",0,1,1,
+        "Cremini mushrooms|1|pack|Produce;Baby spinach|1|bag|Produce;Couscous|1|box|Pantry;Lemon|1|each|Produce",
+        "Cook couscous|Sauté mushrooms; add shrimp|Wilt spinach; finish lemon; serve"
+      ],
+      ["shrimp-10","Shrimp fajita bowls + peppers + onions + rice","shrimp","mexican","peppers,onions","rice",0,0,1,
+        "Bell peppers|2|each|Produce;Onion|1|each|Produce;Rice|1|bag|Pantry;Fajita seasoning|1|each|Spices/Sauces;Lime|1|each|Produce",
+        "Cook rice|Sauté peppers+onions|Add shrimp + seasoning; finish lime"
+      ],
+      ["shrimp-11","Shrimp + roasted eggplant + tomatoes + farro","shrimp","mediterranean","eggplant,tomatoes","farro",0,0,1,
+        "Eggplant|1|each|Produce;Tomatoes|2|each|Produce;Cooked farro (10-min)|1|pack|Pantry",
+        "Roast eggplant+tomatoes|Sauté shrimp quickly|Serve with farro"
+      ],
+      ["shrimp-12","Shrimp + roasted mushrooms + spinach + farro","shrimp","new american","mushrooms,spinach","farro",0,0,1,
+        "Cremini mushrooms|1|pack|Produce;Baby spinach|1|bag|Produce;Cooked farro (10-min)|1|pack|Pantry",
+        "Roast mushrooms|Cook shrimp; wilt spinach|Serve with farro"
+      ],
     ];
 
     function parseMeals(rows){
@@ -470,35 +806,13 @@
     }
 
     const MEALS = parseMeals(MEAL_ROWS);
-
-    // -----------------------------
-    // Per-plan-day ingredient overrides
-    // -----------------------------
-    function ensureOverrides(day){
-      if(!day) return { removed:[], added:[] };
-      if(day.overrides && Array.isArray(day.overrides.removed) && Array.isArray(day.overrides.added)) return day.overrides;
-      return { removed:[], added:[] };
-    }
-
-    function effectiveIngredients(meal, day){
-      if(!meal) return [];
-      const ov = ensureOverrides(day);
-      const removed = new Set((ov.removed||[]).map(norm));
-      const base = (meal.ingredients||[]).filter(ing => !removed.has(norm(ing.name)));
-      const added = (ov.added||[]).map(a => ({
-        name: a.name,
-        qty: Number(a.qty||1),
-        unit: a.unit || "each",
-        aisle: a.aisle || guessAisleForName(a.name)
-      })).filter(x => x.name && String(x.name).trim());
-      return base.concat(added);
-    }
+    const MEAL_BY_ID = Object.fromEntries(MEALS.map(m => [m.id, m])); // ✅ perf + fewer footguns
 
     // -----------------------------
     // Persistence
     // -----------------------------
     const DEFAULT_STATE = {
-      version: 27,
+      schemaVersion: 1, // internal schema version (NOT tied to STORAGE_KEY)
       settings: {
         dinnerNights: 5,
         leftoverNights: 1,
@@ -523,10 +837,29 @@
       ],
       avoidedMealIds: [],
       history: [], // {date, mealId, action:"planned"|"done"|"declined"|"swapped"}
-      plan: { weekOf: todayISO(), days: [] } // {id,date,kind,mealId,status,overrides?}
+      plan: { weekOf: todayISO(), days: [] } // {id,date,kind,mealId,status, overrides?}
     };
 
     function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
+
+    // ✅ immutable normalization (no mutation)
+    function ensureOverrides(day){
+      const ov = (day && day.overrides) ? day.overrides : null;
+      return {
+        removed: Array.isArray(ov && ov.removed) ? ov.removed : [],
+        added: Array.isArray(ov && ov.added) ? ov.added : []
+      };
+    }
+
+    function normalizePlanDays(days){
+      const safe = Array.isArray(days) ? days : [];
+      return safe.map(d=>{
+        if(!d) return d;
+        if(d.kind !== "meal") return d;
+        const ov = ensureOverrides(d);
+        return Object.assign({}, d, { overrides: { removed: ov.removed, added: ov.added } });
+      });
+    }
 
     function loadState(){
       try{
@@ -545,22 +878,12 @@
           funSnacks: Array.isArray(parsed.funSnacks) ? parsed.funSnacks : s.funSnacks,
           avoidedMealIds: Array.isArray(parsed.avoidedMealIds) ? parsed.avoidedMealIds : s.avoidedMealIds,
           history: Array.isArray(parsed.history) ? parsed.history : s.history,
-          plan: parsed.plan ? { ...s.plan, ...parsed.plan, days: Array.isArray(parsed.plan.days) ? parsed.plan.days : s.plan.days } : s.plan
+          plan: parsed.plan ? { ...s.plan, ...parsed.plan, days: normalizePlanDays(parsed.plan.days) } : s.plan
         };
-
-        // ensure day overrides exist (backwards compatible)
-        merged.plan.days = (merged.plan.days||[]).map(d=>{
-          if(!d) return d;
-          if(d.kind === "meal"){
-            const ov = ensureOverrides(d);
-            return Object.assign({}, d, { overrides: ov });
-          }
-          return d;
-        });
-
         for(const p of PROTEINS){
           if(typeof merged.inventoryLbs[p] !== "number") merged.inventoryLbs[p] = s.inventoryLbs[p] || 0;
         }
+        merged.plan.days = normalizePlanDays(merged.plan.days);
         return merged;
       }catch(err){
         console.warn("loadState failed; using defaults", err);
@@ -571,6 +894,25 @@
     function saveState(state){
       try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
       catch(err){ console.warn("saveState failed", err); }
+    }
+
+    // -----------------------------
+    // Per-plan-day ingredient overrides
+    // -----------------------------
+    function effectiveIngredients(meal, day){
+      const ov = ensureOverrides(day);
+      const removedSet = new Set((ov.removed||[]).map(norm));
+
+      const base = (meal.ingredients||[]).filter(ing => !removedSet.has(norm(ing.name)));
+
+      const added = (ov.added||[]).map(a => ({
+        name: (a.name||"").trim(),
+        qty: Number(a.qty||1),
+        unit: a.unit || "each",
+        aisle: a.aisle || guessAisleForName(a.name)
+      })).filter(x => x.name);
+
+      return base.concat(added);
     }
 
     // -----------------------------
@@ -597,7 +939,6 @@
 
       if(ctx.lastProtein && meal.protein === ctx.lastProtein) score -= 8;
 
-      // Veg variety
       const used = ctx.vegCounts;
       const uniqueVeg = new Set(meal.vegTags||[]);
       uniqueVeg.forEach(v=>{
@@ -607,7 +948,6 @@
         else score -= 3;
       });
 
-      // Cuisine variety
       const cc = ctx.cuisineCounts[meal.cuisine] || 0;
       if(cc === 0) score += 4;
       else if(cc === 1) score += 1;
@@ -673,7 +1013,6 @@
           if(sc > bestScore){ bestScore = sc; best = meal; }
         }
 
-        // fallback: allow recent meals (but not same-week repeats), still respect caps
         if(!best){
           for(const meal of pool){
             if(weekMealIds.has(meal.id)) continue;
@@ -693,7 +1032,6 @@
           }
         }
 
-        // fallback: fully relax caps
         if(!best){
           for(const meal of pool){
             if(weekMealIds.has(meal.id)) continue;
@@ -720,7 +1058,6 @@
         lastProtein = best.protein;
       }
 
-      // Place leftovers on last N nights
       const days = [];
       let mealIdx = 0;
       let leftoversLeft = leftoverNights;
@@ -737,7 +1074,7 @@
             kind:"meal",
             mealId: m ? m.id : null,
             status:"planned",
-            overrides: { removed:[], added:[] } // NEW: per-day overrides
+            overrides: { removed: [], added: [] }
           });
           mealIdx++;
         }
@@ -746,65 +1083,76 @@
     }
 
     // -----------------------------
-    // Grocery list
+    // Grocery list (respects per-day overrides)
     // -----------------------------
     function buildGroceryList(state){
       const pantry = state.pantry || [];
       const staples = state.weeklyStaples || [];
       const planDays = (state.plan && state.plan.days) ? state.plan.days : [];
 
-      const mealDays = planDays.filter(d=>d.kind==="meal" && d.mealId);
-      const meals = mealDays
-        .map(d=>({ day:d, meal: MEALS.find(m=>m.id===d.mealId) }))
-        .filter(x=>!!x.meal);
-
       const agg = new Map(); // key: norm|unit|aisle -> item
       function addItem(name, qty, unit, aisle){
         if(!name) return;
-        const key = `${norm(name)}|${unit||"each"}|${aisle||guessAisleForName(name)}`;
+        const finalAisle = aisle || guessAisleForName(name);
+        const key = `${norm(name)}|${unit||"each"}|${finalAisle}`;
         const ex = agg.get(key);
         if(!ex){
-          agg.set(key, { name:name.trim(), qty:Number(qty||1), unit:unit||"each", aisle:aisle||guessAisleForName(name) });
+          agg.set(key, { name:name.trim(), qty:Number(qty||1), unit:unit||"each", aisle:finalAisle });
         }else{
           ex.qty = round2(ex.qty + Number(qty||1));
         }
       }
 
-      // meal ingredients (protein intentionally excluded from lists)
-      meals.forEach(({meal, day})=>{
+      planDays.forEach(day=>{
+        if(!day || day.kind !== "meal" || !day.mealId) return;
+        const meal = MEAL_BY_ID[day.mealId];
+        if(!meal) return;
         const ings = effectiveIngredients(meal, day);
-        ings.forEach(ing=>{
-          addItem(ing.name, ing.qty, ing.unit, ing.aisle);
-        });
+        (ings||[]).forEach(ing=> addItem(ing.name, ing.qty, ing.unit, ing.aisle));
       });
 
-      // weekly staples as 1 each
-      staples.forEach(s=>{
-        addItem(s, 1, "each", guessAisleForName(s));
-      });
+      staples.forEach(s=> addItem(s, 1, "each", guessAisleForName(s)));
 
-      // fun snacks enabled as 1 each
       (state.funSnacks||[]).forEach(sn=>{
         if(sn.enabled) addItem(sn.name, 1, "each", AISLES.SNACKS);
       });
 
-      // pantry fuzzy removal
       const items = Array.from(agg.values()).filter(it => !fuzzyCovered(it.name, pantry));
 
-      // group by aisle
       const byAisle = {};
       items.forEach(it=>{
         const a = it.aisle || AISLES.PANTRY;
         (byAisle[a] = byAisle[a] || []).push(it);
       });
 
-      // sort + output
       return AISLE_ORDER
         .filter(a => byAisle[a] && byAisle[a].length)
         .map(a => ({
           aisle:a,
           items: byAisle[a].sort((x,y)=> x.name.localeCompare(y.name))
         }));
+    }
+
+    function groceryListToText(state, list){
+      const weekOf = (state.plan && state.plan.weekOf) ? state.plan.weekOf : todayISO();
+      const lines = [];
+      lines.push(`Trader Joe’s Grocery List`);
+      lines.push(`Week of: ${weekOf}`);
+      lines.push(`Generated: ${todayISO()}`);
+      lines.push(``);
+      lines.push(`Notes:`);
+      lines.push(`- Includes planned meals (with per-day ingredient edits), weekly staples, enabled snacks.`);
+      lines.push(`- Pantry items are removed via fuzzy match.`);
+      lines.push(`- Costco proteins are NOT included.`);
+      lines.push(``);
+      for(const group of (list||[])){
+        lines.push(`== ${group.aisle} ==`);
+        for(const it of group.items){
+          lines.push(`- ${it.name} — ${qtyToDisplay(it.qty, it.unit)}`);
+        }
+        lines.push(``);
+      }
+      return lines.join("\n").trim() + "\n";
     }
 
     // -----------------------------
@@ -1066,44 +1414,70 @@
       const day = props.day;
       if(!meal || !day) return null;
 
+      // ✅ prevent background scroll while modal is open
+      useEffect(()=>{
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return ()=>{ document.body.style.overflow = prev; };
+      }, []);
+
       const ov = ensureOverrides(day);
-      const removed = new Set((ov.removed||[]).map(norm));
+      const removedSet = new Set((ov.removed||[]).map(norm));
       const base = (meal.ingredients||[]);
-      const current = effectiveIngredients(meal, day);
+      const added = (ov.added||[]);
 
-      // add form
-      const [aName, setAName] = useState("");
-      const [aQty, setAQty] = useState("1");
-      const [aUnit, setAUnit] = useState("each");
-      const [aAisle, setAAisle] = useState("");
+      const [addName, setAddName] = useState("");
+      const [addQty, setAddQty] = useState("1");
+      const [addUnit, setAddUnit] = useState("each");
+      const [addAisle, setAddAisle] = useState("");
 
-      function toggleRemoveBase(ingName){
-        const key = norm(ingName);
+      function toggleRemoveIngredient(name){
+        const n = norm(name);
         const nextRemoved = new Set((ov.removed||[]).map(norm));
-        if(nextRemoved.has(key)) nextRemoved.delete(key); else nextRemoved.add(key);
+        if(nextRemoved.has(n)) nextRemoved.delete(n);
+        else nextRemoved.add(n);
+
         props.onUpdateOverrides(day.id, {
           removed: Array.from(nextRemoved),
-          added: ov.added || []
+          added: ov.added
         });
       }
 
       function removeAdded(id){
-        const nextAdded = (ov.added||[]).filter(x => x && x.id !== id);
-        props.onUpdateOverrides(day.id, { removed: ov.removed || [], added: nextAdded });
+        props.onUpdateOverrides(day.id, {
+          removed: ov.removed,
+          added: (ov.added||[]).filter(a=>a.id!==id)
+        });
       }
 
       function addIngredient(){
-        const name = (aName||"").trim();
-        if(!name) return;
-        const qty = Number(aQty||1);
-        const unit = (aUnit||"each").trim() || "each";
-        const aisle = (aAisle||"").trim() || guessAisleForName(name);
-        const nextAdded = [{ id: uid(), name, qty: isFinite(qty)?qty:1, unit, aisle }].concat(ov.added||[]);
-        props.onUpdateOverrides(day.id, { removed: ov.removed || [], added: nextAdded });
-        setAName(""); setAQty("1"); setAUnit("each"); setAAisle("");
+        const nm = (addName||"").trim();
+        if(!nm) return;
+        const qty = Number(addQty||1);
+        const unit = (addUnit||"each").trim() || "each";
+        const aisle = (addAisle||"").trim() || guessAisleForName(nm);
+
+        const newAdded = (ov.added||[]).concat([{
+          id: uid(),
+          name: nm,
+          qty: isFinite(qty) && qty>0 ? qty : 1,
+          unit,
+          aisle
+        }]);
+
+        props.onUpdateOverrides(day.id, {
+          removed: ov.removed,
+          added: newAdded
+        });
+
+        setAddName("");
+        setAddQty("1");
+        setAddUnit("each");
+        setAddAisle("");
       }
 
-      // IMPORTANT FIX: use onClick overlay, not onMouseDown (prevents swallowing button clicks)
+      const effective = effectiveIngredients(meal, day);
+
       return e("div",{className:"modalOverlay", onClick: props.onClose},
         e("div",{className:"modal", onClick:(ev)=>ev.stopPropagation()},
           e("div",{className:"closeRow"},
@@ -1115,117 +1489,118 @@
                 meal.processed ? e("span",{className:"tag bad"},"processed") : null,
                 meal.refinedCarb ? e("span",{className:"tag warn"},"refined-carb") : null,
                 meal.vegForward ? e("span",{className:"tag good"},"veg-forward") : null,
-                e("span",{className:"tag"}, formatDateShort(day.date)),
-                (day.overrides && ((day.overrides.removed||[]).length || (day.overrides.added||[]).length))
-                  ? e("span",{className:"tag good"}, "customized for this day")
-                  : null
+                (meal.vegTags||[]).slice(0,6).map(v=> e("span",{className:"tag", key:v}, v))
               )
             ),
-            e("button",{className:"btn small", onClick: props.onClose},"Close")
+            // ✅ true “X” close affordance
+            e("button",{className:"xbtn", onClick: props.onClose, "aria-label":"Close recipe"},"✕")
           ),
 
           e("div",{className:"cols"},
-            e("div",{className:"card", style:{padding:12, background:"var(--modalCard)", boxShadow:"none"}},
+            e("div",{className:"card", style:{padding:12, background:"rgba(0,0,0,.22)", boxShadow:"none"}},
               e("h2",{style:{marginBottom:6}},"Ingredients (Trader Joe’s)"),
-              e("div",{className:"mutedSmall", style:{marginBottom:8}},
-                "Edits here apply ", e("b",null,"only to this planned day"), " and flow to the grocery list."
+              e("div",{className:"callout", style:{marginBottom:10}},
+                "Edits here apply to ", e("b",null, formatDateShort(day.date)), " only, and flow into the grocery list."
               ),
-
               e("table",{className:"smallTable"},
                 e("thead",null,
                   e("tr",null,
                     e("th",null,"Item"),
                     e("th",{style:{width:120}},"Qty"),
                     e("th",{style:{width:150}},"Aisle"),
-                    e("th",{style:{width:54}},"")
+                    e("th",{style:{width:86}},"Edit")
                   )
                 ),
                 e("tbody",null,
-                  // Base ingredients with toggle remove
                   base.map((ing, idx)=>{
-                    const isRemoved = removed.has(norm(ing.name));
-                    return e("tr",{key:"base-"+idx},
+                    const isRemoved = removedSet.has(norm(ing.name));
+                    return e("tr",{key:"b-"+idx},
                       e("td",null,
-                        isRemoved ? e("span",{className:"muted2", style:{textDecoration:"line-through"}}, ing.name) : ing.name
+                        isRemoved ? e("span",{className:"mutedStrike"}, ing.name) : ing.name
                       ),
-                      e("td",{className: isRemoved ? "muted2" : "muted"}, qtyToDisplay(ing.qty, ing.unit)),
+                      e("td",{className:"muted"}, qtyToDisplay(ing.qty, ing.unit)),
                       e("td",{className:"muted2"}, ing.aisle || guessAisleForName(ing.name)),
                       e("td",null,
-                        e("button",{
-                          className: "iconBtn " + (isRemoved ? "" : "danger"),
-                          title: isRemoved ? "Undo remove" : "Remove from this day",
-                          onClick: ()=>toggleRemoveBase(ing.name)
-                        }, isRemoved ? "↩" : "✕")
+                        e("button",{ className:"xbtn", onClick: ()=> toggleRemoveIngredient(ing.name) }, isRemoved ? "Undo" : "✕")
                       )
                     );
                   }),
 
-                  // Added ingredients (can remove)
-                  (ov.added||[]).map((a, idx)=>{
-                    return e("tr",{key:"add-"+(a.id||idx)},
+                  (added||[]).length ? e("tr", {key:"sep"},
+                    e("td",{colSpan:4, className:"muted2", style:{paddingTop:12}}, "Added for this day:")
+                  ) : null,
+
+                  (added||[]).map((a)=>
+                    e("tr",{key:"a-"+a.id},
                       e("td",null, a.name),
                       e("td",{className:"muted"}, qtyToDisplay(Number(a.qty||1), a.unit||"each")),
                       e("td",{className:"muted2"}, a.aisle || guessAisleForName(a.name)),
                       e("td",null,
-                        e("button",{
-                          className:"iconBtn danger",
-                          title:"Remove added ingredient",
-                          onClick: ()=>removeAdded(a.id)
-                        },"✕")
+                        e("button",{className:"xbtn", onClick: ()=> removeAdded(a.id)}, "✕")
                       )
-                    );
-                  })
+                    )
+                  )
                 )
               ),
 
               e("div",{className:"hr"}),
 
-              e("h2",{style:{marginBottom:8}},"Add ingredient (this day only)"),
+              e("div",{className:"muted2", style:{marginBottom:6}}, "Add ingredient for this day"),
               e("div",{className:"twoCol"},
                 e("div",null,
-                  e("div",{className:"muted2"},"Item"),
-                  e("input",{className:"input", value:aName, placeholder:"e.g., scallions", onChange:(ev)=>setAName(ev.target.value),
+                  e("input",{
+                    className:"input",
+                    value:addName,
+                    placeholder:"e.g., scallions",
+                    onChange:(ev)=>setAddName(ev.target.value),
                     onKeyDown:(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); addIngredient(); } }
                   })
                 ),
                 e("div",null,
-                  e("div",{className:"muted2"},"Qty"),
-                  e("input",{className:"input", value:aQty, type:"number", step:"0.25", min:"0", onChange:(ev)=>setAQty(ev.target.value)})
-                )
-              ),
-              e("div",{style:{height:10}}),
-              e("div",{className:"twoCol"},
-                e("div",null,
-                  e("div",{className:"muted2"},"Unit"),
-                  e("select",{className:"input", value:aUnit, onChange:(ev)=>setAUnit(ev.target.value)},
-                    ["each","bag","box","can","pack","jar","bottle","tube","lb","oz","cup"].map(u=> e("option",{key:u, value:u}, u))
-                  )
+                  e("input",{
+                    className:"input",
+                    value:addQty,
+                    placeholder:"Qty (e.g., 1)",
+                    onChange:(ev)=>setAddQty(ev.target.value),
+                    onKeyDown:(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); addIngredient(); } }
+                  })
                 ),
                 e("div",null,
-                  e("div",{className:"muted2"},"Aisle"),
-                  e("select",{className:"input", value:aAisle, onChange:(ev)=>setAAisle(ev.target.value)},
-                    e("option",{value:""},"Auto-detect"),
-                    AISLE_ORDER.map(a=> e("option",{key:a, value:a}, a))
-                  )
+                  e("input",{
+                    className:"input",
+                    value:addUnit,
+                    placeholder:"Unit (each, bag, can, box...)",
+                    onChange:(ev)=>setAddUnit(ev.target.value),
+                    onKeyDown:(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); addIngredient(); } }
+                  })
+                ),
+                e("div",null,
+                  e("input",{
+                    className:"input",
+                    value:addAisle,
+                    placeholder:"Aisle (optional — auto-guessed if blank)",
+                    onChange:(ev)=>setAddAisle(ev.target.value),
+                    onKeyDown:(ev)=>{ if(ev.key==="Enter"){ ev.preventDefault(); addIngredient(); } }
+                  })
                 )
               ),
               e("div",{style:{height:10}}),
-              e("div",{className:"row"},
-                e("button",{className:"btn small good", onClick:addIngredient, disabled: !(aName||"").trim()}, "Add to this day"),
-                e("span",{className:"muted2"}, "Shows in grocery list immediately.")
-              ),
+              e("button",{className:"btn small good", onClick:addIngredient}, "Add to this day"),
 
-              e("div",{className:"footerNote"},"Protein comes from Costco inventory (not on the grocery list).")
+              e("div",{className:"footerNote"},
+                "Protein comes from Costco inventory (not on the grocery list)."
+              )
             ),
 
-            e("div",{className:"card", style:{padding:12, background:"var(--modalCard)", boxShadow:"none"}},
+            e("div",{className:"card", style:{padding:12, background:"rgba(0,0,0,.22)", boxShadow:"none"}},
               e("h2",{style:{marginBottom:6}},"Weeknight steps (≈20–40 min)"),
               e("ol",{className:"muted"},
                 (meal.steps||[]).map((s, idx)=> e("li",{key:idx, style:{marginBottom:6}}, s))
               ),
               e("div",{className:"hr"}),
               e("div",{className:"muted2"},
-                "Tip: keep ", e("b",null,"Healthy mode"), " ON and tighten caps to stay “healthy by default”."
+                "Current effective ingredient list for this day: ",
+                e("b",null, String(effective.length)), " items."
               )
             )
           )
@@ -1236,30 +1611,31 @@
     function PlannerCard(props){
       const state = props.state;
       const setState = props.setState;
-      const [modalCtx, setModalCtx] = useState(null); // {dayId}
+
+      const [modalOpen, setModalOpen] = useState(false);
+      const [modalDayId, setModalDayId] = useState(null);
+
       const needLbs = proteinNeededLbsForMeal(state.settings.portion);
 
-      function mealById(id){ return MEALS.find(m=>m.id===id) || null; }
+      function mealById(id){ return id ? (MEAL_BY_ID[id] || null) : null; }
+      function dayById(id){ return (state.plan.days||[]).find(d=>d.id===id) || null; }
 
-      function openRecipe(dayId){
-        setModalCtx({dayId});
-      }
+      function openRecipe(dayId){ setModalDayId(dayId); setModalOpen(true); }
+      function closeRecipe(){ setModalOpen(false); setModalDayId(null); }
 
-      function closeRecipe(){
-        setModalCtx(null);
-      }
-
-      function updateDayOverrides(dayId, overrides){
+      function onUpdateOverrides(dayId, overrides){
         setState(prev=>{
           const next = deepClone(prev);
-          next.plan.days = (next.plan.days||[]).map(d=>{
-            if(d && d.id === dayId){
-              return Object.assign({}, d, { overrides: {
-                removed: Array.isArray(overrides.removed) ? overrides.removed : [],
-                added: Array.isArray(overrides.added) ? overrides.added : []
-              }});
-            }
-            return d;
+          next.plan.days = normalizePlanDays(next.plan.days).map(d=>{
+            if(!d || d.id!==dayId) return d;
+            if(d.kind!=="meal") return d;
+            const ov = ensureOverrides(d);
+            return Object.assign({}, d, {
+              overrides: {
+                removed: Array.isArray(overrides.removed) ? overrides.removed : ov.removed,
+                added: Array.isArray(overrides.added) ? overrides.added : ov.added
+              }
+            });
           });
           return next;
         });
@@ -1270,7 +1646,6 @@
           const next = deepClone(prev);
           const plan = generateWeekPlan(next);
           next.plan = plan;
-          // record planned
           const plannedEntries = (plan.days||[])
             .filter(d=>d.kind==="meal" && d.mealId)
             .map(d=>({date:d.date, mealId:d.mealId, action:"planned"}));
@@ -1314,12 +1689,10 @@
             }
           }
 
-          // Build replacement avoiding week repeats + recent meals + avoided
           const currentMealIds = new Set((next.plan.days||[]).filter(d=>d.kind==="meal" && d.mealId && d.id!==dayId).map(d=>d.mealId));
           const recent = getRecentMealIds(next.history||[], Number(next.settings.avoidDays||0));
           const avoid = new Set([...(next.avoidedMealIds||[]), ...recent, ...currentMealIds]);
 
-          // Counters from existing plan
           const vegCounts = {};
           const cuisineCounts = {};
           let lastProtein = null;
@@ -1360,19 +1733,17 @@
           if(best){
             day.mealId = best.id;
             day.status = "planned";
-            day.overrides = { removed:[], added:[] }; // reset overrides on swap for clarity
+            day.overrides = { removed: [], added: [] };
             next.history.push({date: day.date, mealId: best.id, action:"planned"});
             next.history = next.history.slice(-500);
           }else{
             day.mealId = null;
             day.status = "planned";
           }
-
           return next;
         });
       }
 
-      // Manual add (Enter adds)
       const [manual, setManual] = useState("");
       function addManualMeal(){
         const v = manual.trim();
@@ -1388,16 +1759,14 @@
           if(existing.has(found.id)) return prev;
           slot.mealId = found.id;
           slot.status = "planned";
-          slot.overrides = { removed:[], added:[] };
+          slot.overrides = { removed: [], added: [] };
           next.history.push({date: slot.date, mealId: found.id, action:"planned"});
           next.history = next.history.slice(-500);
           return next;
         });
-
         setManual("");
       }
 
-      // Inventory warning
       const inventoryWarnings = useMemo(()=>{
         const need = proteinNeededLbsForMeal(state.settings.portion);
         const needByProtein = {};
@@ -1438,8 +1807,8 @@
         return n;
       }, [state.plan]);
 
-      const activeDay = modalCtx ? (state.plan.days||[]).find(d=>d.id===modalCtx.dayId) : null;
-      const activeMeal = activeDay && activeDay.mealId ? mealById(activeDay.mealId) : null;
+      const activeDay = modalDayId ? dayById(modalDayId) : null;
+      const activeMeal = (activeDay && activeDay.mealId) ? mealById(activeDay.mealId) : null;
 
       return e("div",{className:"card"},
         e("h2", null,
@@ -1500,7 +1869,8 @@
             }
             const m = d.mealId ? mealById(d.mealId) : null;
             const status = d.status || "planned";
-            const hasOverrides = d.overrides && ((d.overrides.removed||[]).length || (d.overrides.added||[]).length);
+            const ov = ensureOverrides(d);
+            const editsCount = (ov.removed||[]).length + (ov.added||[]).length;
 
             return e("div",{className:"planCard", key:d.id},
               e("div",{className:"head"},
@@ -1510,7 +1880,7 @@
                   m ? e("div",{className:"meta"},
                     e("span",{className:"tag"}, m.protein),
                     e("span",{className:"tag"}, m.cuisine),
-                    hasOverrides ? e("span",{className:"tag good"},"custom") : null,
+                    editsCount ? e("span",{className:"tag warn"}, `edited (${editsCount})`) : null,
                     m.vegForward ? e("span",{className:"tag good"},"veg-forward") : null,
                     m.processed ? e("span",{className:"tag bad"},"processed") : null,
                     m.refinedCarb ? e("span",{className:"tag warn"},"refined-carb") : null
@@ -1531,12 +1901,12 @@
           }) : e("div",{className:"muted2"},"No plan yet. Click Generate.")
         ),
 
-        e(MealModal,{
+        modalOpen ? e(MealModal,{
           meal: activeMeal,
           day: activeDay,
           onClose: closeRecipe,
-          onUpdateOverrides: updateDayOverrides
-        }),
+          onUpdateOverrides: onUpdateOverrides
+        }) : null,
 
         e("div",{className:"hr"}),
 
@@ -1549,16 +1919,53 @@
 
     function GroceryCard(props){
       const state = props.state;
-      const list = useMemo(()=> buildGroceryList(state), [state.plan, state.pantry, state.weeklyStaples, state.funSnacks]);
+      const list = useMemo(()=> buildGroceryList(state), [
+        state.plan, state.pantry, state.weeklyStaples, state.funSnacks
+      ]);
+
+      const exportText = useMemo(()=> groceryListToText(state, list), [state.plan, state.pantry, state.weeklyStaples, state.funSnacks]);
+      const [copied, setCopied] = useState(false);
+
+      async function doCopy(){
+        const ok = await copyToClipboard(exportText);
+        setCopied(ok);
+        setTimeout(()=> setCopied(false), 1200);
+      }
+
+      function doDownload(){
+        const weekOf = (state.plan && state.plan.weekOf) ? state.plan.weekOf : todayISO();
+        downloadTextFile(`grocery-list-${weekOf}.txt`, exportText);
+      }
+
+      function doPrint(){
+        const weekOf = (state.plan && state.plan.weekOf) ? state.plan.weekOf : todayISO();
+        openPrintWindow(`Grocery List — Week of ${weekOf}`, exportText);
+      }
 
       return e("div",{className:"card"},
-        e("h2",null,"Trader Joe’s grocery list",
+        e("h2",null,
+          "Trader Joe’s grocery list",
           e("span",{className:"muted2"},"(minus pantry)")
         ),
+
         e("div",{className:"callout"},
-          "Generated from planned meals + weekly staples + enabled snacks, then pantry-fuzzy filtered."
+          "Generated from planned meals (including per-day ingredient edits) + weekly staples + enabled snacks, then pantry-fuzzy filtered."
         ),
+
         e("div",{className:"hr"}),
+
+        // ✅ Export controls
+        e("div",{className:"row", style:{justifyContent:"space-between"}},
+          e("div",{className:"row"},
+            e("button",{className:"btn small primary", onClick:doCopy}, copied ? "Copied!" : "Copy list"),
+            e("button",{className:"btn small", onClick:doDownload}, "Download .txt"),
+            e("button",{className:"btn small", onClick:doPrint}, "Print / Save PDF")
+          ),
+          e("div",{className:"muted2"}, `${list.reduce((acc,g)=>acc+g.items.length,0)} items`)
+        ),
+
+        e("div",{className:"hr"}),
+
         list.length===0
           ? e("div",{className:"muted2"},"Nothing to buy (or pantry covers everything).")
           : list.map(group=>
@@ -1582,14 +1989,17 @@
                   )
                 )
               )
-            )
+            ),
+
+        e("div",{className:"footerNote"},
+          "Export includes aisle grouping. Use Print → Save as PDF for a shareable version."
+        )
       );
     }
 
     function App(){
       const [state, setState] = useState(loadState);
 
-      // persist
       useEffect(()=>{ saveState(state); }, [state]);
 
       const needLbs = useMemo(()=> proteinNeededLbsForMeal(state.settings.portion), [state.settings.portion]);
@@ -1609,14 +2019,12 @@
         ),
 
         e("div",{className:"grid"},
-          // LEFT
           e("div",null,
             e(PlannerCard,{state, setState}),
             e("div",{style:{height:14}}),
             e(GroceryCard,{state})
           ),
 
-          // RIGHT
           e("div",null,
             e(SettingsCard,{
               settings: state.settings,
@@ -1651,14 +2059,12 @@
         ),
 
         e("div",{className:"footerNote"},
-          "Tip: data persists as long as this site/domain stays the same and the storage key stays unchanged."
+          "Tip: data persists as long as your site/domain stays the same and the storage key stays unchanged."
         )
       );
     }
 
-    // Render
     ReactDOM.createRoot(document.getElementById("root")).render(e(App));
-
   })();
   </script>
 </body>
